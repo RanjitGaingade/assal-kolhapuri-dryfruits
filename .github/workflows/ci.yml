@@ -1,11 +1,10 @@
-
 name: Node.js CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
@@ -30,5 +29,21 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Build Docker Image
-        run: docker build -t assal-kolhapuri-dryfruits-api:test .
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE=ranjit1984/assal-kolhapuri-dryfruits-api
+          TAG=${{ github.sha }}
+
+          docker build \
+            -t $IMAGE:$TAG \
+            -t $IMAGE:latest \
+            .
+
+          docker push $IMAGE:$TAG
+          docker push $IMAGE:latest
