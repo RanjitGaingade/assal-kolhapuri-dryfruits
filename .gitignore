@@ -1,5 +1,17 @@
-node_modules
 # Keep environment variables out of version control
+# Environment variables
 .env
+.env.*
 
+# Dependencies
+node_modules/
+
+# Prisma generated files
 /generated/prisma
+
+# Database backups
+*.backup
+*.dump
+
+# Local Docker backup files
+Dockerfile.backup
