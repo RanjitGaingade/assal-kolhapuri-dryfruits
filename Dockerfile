@@ -34,6 +34,7 @@ RUN npm ci --omit=dev
 
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
+COPY Public ./Public
 COPY server.js ./server.js
 
 # Generate Prisma Client inside production image
