@@ -36,9 +36,9 @@ COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
 COPY server.js ./server.js
 
-# Generate Prisma Client inside the production image
+# Generate Prisma Client inside production image
 RUN npx prisma generate
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:migrate"]
+CMD ["node", "server.js"]
