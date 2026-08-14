@@ -22,9 +22,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
   api:
-    image: assal-api-test    
+    image: ranjit1984/assal-kolhapuri-dryfruits-api:latest
     container_name: assal-api
     restart: unless-stopped
 
