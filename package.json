@@ -1,17 +1,29 @@
 {
   "name": "assal-kolhapuri-dryfruits",
   "version": "1.0.0",
-  "description": "",
+  "description": "Assal Kolhapuri Dryfruits e-commerce application",
   "main": "server.js",
-"scripts": {
-  "start": "node server.js",
-  "start:migrate": "npx prisma migrate deploy && node server.js",
-  "dev": "node --watch server.js",
-  "test": "echo \"Error: no test specified\" && exit 1"
-},
- 
-  "keywords": [],
-  "author": "",
+  "scripts": {
+    "start": "node server.js",
+    "start:migrate": "npx prisma migrate deploy && node server.js",
+    "dev": "node --watch server.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "prisma",
+    "postgresql",
+    "docker",
+    "devops"
+  ],
+  "author": "Ranjit Gaingade",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -21,6 +33,10 @@
     "pg": "^8.23.0"
   },
   "devDependencies": {
-    "prisma": "^7.9.1"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "jest": "^30.4.2",
+    "prisma": "^7.9.1",
+    "supertest": "^7.2.2"
   }
 }
