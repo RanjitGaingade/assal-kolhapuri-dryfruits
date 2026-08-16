@@ -40,7 +40,7 @@ services:
       db:
         condition: service_healthy
 
-    command: ["npm", "run", "start:migrate"]
+    command: ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node server.js"]
 
   nginx:
     image: nginx:alpine
