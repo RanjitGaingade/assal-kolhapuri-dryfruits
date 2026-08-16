@@ -11,3 +11,6 @@ coverage/
 *.log
 docker-compose.yml
 Dockerfile.backup
+npm-debug.log
+coverage
+tests
