@@ -26,6 +26,8 @@ services:
     image: ranjit1984/assal-kolhapuri-dryfruits-api:latest
     container_name: assal-api
     restart: unless-stopped
+    volumes:
+      - ./public:/app/public:ro
 
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}

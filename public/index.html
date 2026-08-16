@@ -1,5 +1,7 @@
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,22 +13,58 @@
 
 <body>
 
+  <!-- ================= HEADER ================= -->
+
   <header>
+
     <div class="logo">
-      ASSAL
-      <span>KOLHAPURI DRYFRUITS</span>
+
+      <img
+        src="images/logo.jpg"
+        alt="Assal Kolhapuri Dryfruits Logo"
+      >
+
+      <span>
+        ASSAL KOLHAPURI STORE
+      </span>
+
     </div>
 
+
     <nav>
+
       <a href="/">Home</a>
+
       <a href="#products">Products</a>
+
       <a href="#about">About Us</a>
+
       <a href="#contact">Contact</a>
+
+      <button
+        type="button"
+        class="cart-link"
+        onclick="openCart()"
+      >
+        🛒 Cart
+
+        <span id="cartCount">
+          0
+        </span>
+
+      </button>
+
     </nav>
+
   </header>
 
 
+  <!-- ================= MAIN ================= -->
+
   <main>
+
+
+    <!-- ================= HERO ================= -->
 
     <section class="hero">
 
@@ -42,56 +80,113 @@
           Packed With Goodness
         </h1>
 
-        <p>
+        <p class="hero-description">
           Carefully selected dry fruits, packed fresh
           and delivered to your doorstep.
         </p>
 
-        <a href="#products" class="button">
+        <a
+          href="#products"
+          class="button"
+        >
           Shop Now →
         </a>
 
       </div>
 
+
       <div class="hero-image">
-        <div class="dryfruit-placeholder">
-          🥜 🌰
-        </div>
+
+        <img
+          src="images/hero.png"
+          alt="Premium Dry Fruits"
+        >
+
       </div>
 
     </section>
 
+
+    <!-- ================= TRUST ================= -->
 
     <section class="trust">
 
-      <div>
-        🚚
-        <strong>Fast Delivery</strong>
-        <span>Pan India Delivery</span>
+      <div class="trust-item">
+
+        <div class="trust-icon">
+          🚚
+        </div>
+
+        <strong>
+          Fast Delivery
+        </strong>
+
+        <span>
+          Pan India Delivery
+        </span>
+
       </div>
 
-      <div>
-        🛡️
-        <strong>Premium Quality</strong>
-        <span>100% Natural & Fresh</span>
+
+      <div class="trust-item">
+
+        <div class="trust-icon">
+          🛡️
+        </div>
+
+        <strong>
+          Premium Quality
+        </strong>
+
+        <span>
+          100% Natural & Fresh
+        </span>
+
       </div>
 
-      <div>
-        📦
-        <strong>Secure Packaging</strong>
-        <span>Hygienic & Safe</span>
+
+      <div class="trust-item">
+
+        <div class="trust-icon">
+          📦
+        </div>
+
+        <strong>
+          Secure Packaging
+        </strong>
+
+        <span>
+          Hygienic & Safe
+        </span>
+
       </div>
 
-      <div>
-        ✓
-        <strong>Trusted Brand</strong>
-        <span>10,000+ Customers</span>
+
+      <div class="trust-item">
+
+        <div class="trust-icon">
+          ✓
+        </div>
+
+        <strong>
+          Trusted Brand
+        </strong>
+
+        <span>
+          10,000+ Customers
+        </span>
+
       </div>
 
     </section>
 
 
-    <section id="products" class="products">
+    <!-- ================= PRODUCTS ================= -->
+
+    <section
+      id="products"
+      class="products"
+    >
 
       <p class="eyebrow">
         OUR BESTSELLERS
@@ -101,14 +196,22 @@
         Our Popular Products
       </h2>
 
-      <div id="productsGrid" class="products-grid">
+      <div
+        id="productsGrid"
+        class="products-grid"
+      >
         Loading products...
       </div>
 
     </section>
 
 
-    <section id="about" class="about">
+    <!-- ================= ABOUT ================= -->
+
+    <section
+      id="about"
+      class="about"
+    >
 
       <p class="eyebrow">
         WHY CHOOSE US
@@ -118,35 +221,61 @@
         The Assal Promise
       </h2>
 
+
       <div class="features">
 
-        <div>
-          <h3>🌿 Handpicked Quality</h3>
+
+        <div class="feature">
+
+          <h3>
+            🌿 Handpicked Quality
+          </h3>
+
           <p>
             Carefully selected from the best farms.
           </p>
+
         </div>
 
-        <div>
-          <h3>✓ 100% Natural</h3>
+
+        <div class="feature">
+
+          <h3>
+            ✓ 100% Natural
+          </h3>
+
           <p>
             No preservatives or artificial flavours.
           </p>
+
         </div>
 
-        <div>
-          <h3>🍃 Fresh & Hygienic</h3>
+
+        <div class="feature">
+
+          <h3>
+            🍃 Fresh & Hygienic
+          </h3>
+
           <p>
             Packed in hygienic conditions.
           </p>
+
         </div>
 
-        <div>
-          <h3>❤ Customer Satisfaction</h3>
+
+        <div class="feature">
+
+          <h3>
+            ❤ Customer Satisfaction
+          </h3>
+
           <p>
             Your satisfaction is our priority.
           </p>
+
         </div>
+
 
       </div>
 
@@ -155,9 +284,13 @@
   </main>
 
 
+  <!-- ================= FOOTER ================= -->
+
   <footer id="contact">
 
-    <h3>ASSAL KOLHAPURI DRYFRUITS</h3>
+    <h3>
+      ASSAL KOLHAPURI DRYFRUITS
+    </h3>
 
     <p>
       Premium quality dry fruits from Kolhapur.
@@ -170,7 +303,106 @@
   </footer>
 
 
+  <!-- ================= CART OVERLAY ================= -->
+
+  <div
+    id="cartOverlay"
+    class="cart-overlay"
+    onclick="closeCart()"
+  ></div>
+
+
+  <!-- ================= CART DRAWER ================= -->
+
+  <aside
+    id="cartDrawer"
+    class="cart-drawer"
+  >
+
+    <div class="cart-header">
+
+      <h2>
+        Your Cart
+      </h2>
+
+      <button
+        type="button"
+        class="cart-close"
+        onclick="closeCart()"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <div
+      id="cartItems"
+      class="cart-items"
+    >
+      <!-- Cart products appear here -->
+    </div>
+
+
+    <div class="cart-summary">
+
+      <div class="summary-row">
+
+        <span>
+          Subtotal
+        </span>
+
+        <strong id="cartSubtotal">
+          ₹0
+        </strong>
+
+      </div>
+
+
+      <div class="summary-row">
+
+        <span>
+          Delivery
+        </span>
+
+        <strong id="cartDelivery">
+          ₹0
+        </strong>
+
+      </div>
+
+
+      <div class="summary-total">
+
+        <span>
+          Total
+        </span>
+
+        <strong id="cartTotal">
+          ₹0
+        </strong>
+
+      </div>
+
+
+      <button
+        type="button"
+        class="checkout-button"
+        onclick="placeOrder()"
+      >
+        Proceed to Checkout
+      </button>
+
+    </div>
+
+  </aside>
+
+
+  <!-- ================= JAVASCRIPT ================= -->
+
   <script src="/js/app.js"></script>
 
 </body>
+
 </html>
+

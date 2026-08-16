@@ -4,81 +4,87 @@ module.exports = [
   {
     ignores: [
       "node_modules/**",
-      "coverage/**",
-      "dist/**",
-      "build/**"
+      "coverage/**"
     ]
   },
 
-  // ESLint configuration file itself
+  // Node.js application
   {
-    files: ["eslint.config.js"],
+    files: [
+      "app.js",
+      "server.js"
+    ],
+
+    ...js.configs.recommended,
 
     languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "commonjs",
-
       globals: {
         require: "readonly",
         module: "readonly",
-        console: "readonly"
+        process: "readonly",
+        console: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly"
       }
     }
   },
 
-  // Recommended JavaScript rules
-  js.configs.recommended,
-
   // Browser JavaScript
   {
-    files: ["public/js/**/*.js"],
+    files: [
+      "public/js/**/*.js"
+    ],
+
+    ...js.configs.recommended,
 
     languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "script",
-
       globals: {
         window: "readonly",
         document: "readonly",
         localStorage: "readonly",
         alert: "readonly",
-        console: "readonly"
+        console: "readonly",
+
+        // Functions called from HTML onclick=""
+        addToCart: "readonly",
+        increaseQuantity: "readonly",
+        decreaseQuantity: "readonly",
+        proceedToCheckout: "readonly",
+        placeOrder: "readonly"
       }
     },
 
     rules: {
-      "no-undef": "error",
-
       "no-unused-vars": [
-        "warn",
+        "error",
         {
-          "varsIgnorePattern":
-            "^(addToCart|increaseQuantity|decreaseQuantity|proceedToCheckout|placeOrder)$"
+          "varsIgnorePattern": "^(addToCart|increaseQuantity|decreaseQuantity|proceedToCheckout|placeOrder)$"
         }
       ]
     }
   },
 
-  // Node.js / Express backend
+  // Jest tests
   {
     files: [
-      "server.js",
       "tests/**/*.js"
     ],
 
+    ...js.configs.recommended,
+
     languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "commonjs",
-
       globals: {
-        process: "readonly",
-        console: "readonly"
-      }
-    },
+        require: "readonly",
 
-    rules: {
-      "no-undef": "error",
-      "no-unused-vars": "warn"
+        jest: "readonly",
+        describe: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly"
+      }
     }
   }
 ];
