@@ -19,7 +19,7 @@ RUN npm ci --omit=dev
 
 FROM node:22-alpine AS production
 
-RUN npm install -g npm@11.19.0
+
 
 WORKDIR /app
 
@@ -34,6 +34,9 @@ COPY public ./public
 COPY server.js ./
 
 RUN npx prisma generate
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx
 
 EXPOSE 3000
 
