@@ -7,20 +7,56 @@ on:
   pull_request:
     branches: [main]
 
+
+# ============================================================
+# GLOBAL VARIABLES
+# ============================================================
+
+env:
+  IMAGE_NAME: ranjit1984/assal-kolhapuri-dryfruits-api
+
+
 jobs:
 
-  # ========================================
-  # TEST
-  # ========================================
+  # ============================================================
+  # 1. PREPARE
+  # ============================================================
+
+  prepare:
+    name: Prepare Image Tag
+    runs-on: ubuntu-latest
+
+    outputs:
+      image_tag: ${{ steps.vars.outputs.image_tag }}
+
+    steps:
+
+      - name: Generate Short Git SHA
+        id: vars
+        run: |
+          IMAGE_TAG="${GITHUB_SHA::7}"
+
+          echo "Git SHA: ${GITHUB_SHA}"
+          echo "Docker Image Tag: ${IMAGE_TAG}"
+
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+
+  # ============================================================
+  # 2. TEST
+  # ============================================================
 
   test:
     name: Lint, Test and Validate
     runs-on: ubuntu-latest
 
+    needs: prepare
+
     steps:
 
       - name: Checkout Repository
         uses: actions/checkout@v4
+
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -28,41 +64,44 @@ jobs:
           node-version: 22
           cache: npm
 
+
       - name: Install Dependencies
         run: npm ci
+
 
       - name: ESLint
         run: npm run lint
 
+
       - name: Jest Tests
         run: npm test
 
+
       - name: Validate Prisma Schema
         run: npx prisma validate
+
 
       - name: Generate Prisma Client
         run: npx prisma generate
 
 
-  # ========================================
-  # DOCKER BUILD + SECURITY SCAN
-  # ========================================
+  # ============================================================
+  # 3. BUILD + SECURITY SCAN
+  # ============================================================
 
   security:
     name: Build and Security Scan
     runs-on: ubuntu-latest
 
-    needs: test
+    needs:
+      - prepare
+      - test
 
     steps:
 
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
-      # ----------------------------------------
-      # Docker Build
-      # ----------------------------------------
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -73,32 +112,35 @@ jobs:
         with:
           context: .
           load: true
-          tags: assal-api:${{ github.sha }}
 
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.image_tag }}
 
-      # ----------------------------------------
-      # Trivy Scan
-      # ----------------------------------------
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
 
       - name: Trivy Vulnerability Scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: assal-api:${{ github.sha }}
+          image-ref: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.image_tag }}
           format: table
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
 
-  # ========================================
-  # PUSH IMAGE
-  # ========================================
+  # ============================================================
+  # 4. PUSH IMAGE TO DOCKER HUB
+  # ============================================================
 
   docker:
     name: Push Docker Image
     runs-on: ubuntu-latest
 
-    needs: security
+    needs:
+      - prepare
+      - security
 
     steps:
 
@@ -107,7 +149,7 @@ jobs:
 
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -126,20 +168,24 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
           tags: |
-            ranjit1984/assal-kolhapuri-dryfruits-api:${{ github.sha }}
-           
+            ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.image_tag }}
+            ${{ env.IMAGE_NAME }}:latest
+
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ========================================
-  # DEPLOY
-  # ========================================
+
+  # ============================================================
+  # 5. DEPLOY TO EC2
+  # ============================================================
 
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
 
-    needs: docker
+    needs:
+      - prepare
+      - docker
 
     steps:
 
@@ -154,23 +200,85 @@ jobs:
 
             set -e
 
+            # --------------------------------------------------
+            # Application directory
+            # --------------------------------------------------
+
             cd /home/ec2-user/assal-kolhapuri-dryfruits
+
+
+            echo "========================================"
+            echo "Starting deployment"
+            echo "========================================"
+
+
+            # --------------------------------------------------
+            # Pull latest Compose configuration
+            # --------------------------------------------------
 
             echo "Pulling latest repository..."
 
             git pull origin main
 
 
-            echo "Pulling latest API image..."
+            # --------------------------------------------------
+            # Set exact Git SHA image tag
+            # --------------------------------------------------
+
+            export IMAGE_TAG=${{ needs.prepare.outputs.image_tag }}
+
+            echo "IMAGE_TAG=${IMAGE_TAG}"
+
+            echo "Docker image:"
+            echo "ranjit1984/assal-kolhapuri-dryfruits-api:${IMAGE_TAG}"
+
+
+            # --------------------------------------------------
+            # Verify Docker Compose configuration
+            # --------------------------------------------------
+
+            echo "Docker Compose configuration:"
+
+            docker compose config | grep -A5 -B2 'image:'
+
+
+            # --------------------------------------------------
+            # Pull exact Docker image
+            # --------------------------------------------------
+
+            echo "Pulling API image..."
 
             docker compose pull api
 
+
+            # --------------------------------------------------
+            # Recreate API container
+            # --------------------------------------------------
 
             echo "Recreating API container..."
 
             docker compose up -d --force-recreate api
 
 
-            echo "Deployment status..."
+            # --------------------------------------------------
+            # Deployment status
+            # --------------------------------------------------
+
+            echo "Deployment status:"
 
             docker compose ps
+
+
+            # --------------------------------------------------
+            # Verify actual running image
+            # --------------------------------------------------
+
+            echo "Running API image:"
+
+            docker inspect assal-api \
+              --format '{{.Config.Image}}'
+
+
+            echo "========================================"
+            echo "Deployment completed"
+            echo "========================================"
