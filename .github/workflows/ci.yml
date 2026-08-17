@@ -127,7 +127,7 @@ jobs:
 
           tags: |
             ranjit1984/assal-kolhapuri-dryfruits-api:${{ github.sha }}
-            ranjit1984/assal-kolhapuri-dryfruits-api:latest
+           
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
