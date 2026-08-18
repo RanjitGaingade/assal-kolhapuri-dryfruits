@@ -1,4 +1,4 @@
-name: Node.js CI/CD
+name: Assal Kolhapuri Dryfruits CI/CD Pipeline
 
 on:
   push:
@@ -34,9 +34,14 @@ jobs:
       - name: Generate Short Git SHA
         id: vars
         run: |
+
           IMAGE_TAG="${GITHUB_SHA::7}"
 
-          echo "Git SHA: ${GITHUB_SHA}"
+          echo "========================================"
+          echo "Git SHA Information"
+          echo "========================================"
+
+          echo "Full Git SHA: ${GITHUB_SHA}"
           echo "Docker Image Tag: ${IMAGE_TAG}"
 
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
@@ -54,9 +59,17 @@ jobs:
 
     steps:
 
+      # --------------------------------------------------------
+      # Checkout Repository
+      # --------------------------------------------------------
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+
+      # --------------------------------------------------------
+      # Setup Node.js
+      # --------------------------------------------------------
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -65,21 +78,41 @@ jobs:
           cache: npm
 
 
+      # --------------------------------------------------------
+      # Install Dependencies
+      # --------------------------------------------------------
+
       - name: Install Dependencies
         run: npm ci
 
+
+      # --------------------------------------------------------
+      # ESLint
+      # --------------------------------------------------------
 
       - name: ESLint
         run: npm run lint
 
 
+      # --------------------------------------------------------
+      # Jest Tests
+      # --------------------------------------------------------
+
       - name: Jest Tests
         run: npm test
 
 
+      # --------------------------------------------------------
+      # Prisma Validation
+      # --------------------------------------------------------
+
       - name: Validate Prisma Schema
         run: npx prisma validate
 
+
+      # --------------------------------------------------------
+      # Prisma Client
+      # --------------------------------------------------------
 
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -99,13 +132,25 @@ jobs:
 
     steps:
 
+      # --------------------------------------------------------
+      # Checkout Repository
+      # --------------------------------------------------------
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
 
+      # --------------------------------------------------------
+      # Docker Buildx
+      # --------------------------------------------------------
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+
+      # --------------------------------------------------------
+      # Build Docker Image
+      # --------------------------------------------------------
 
       - name: Build Docker Image
         uses: docker/build-push-action@v6
@@ -119,6 +164,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+
+      # --------------------------------------------------------
+      # Trivy Vulnerability Scan
+      # --------------------------------------------------------
 
       - name: Trivy Vulnerability Scan
         uses: aquasecurity/trivy-action@v0.36.0
@@ -144,9 +193,17 @@ jobs:
 
     steps:
 
+      # --------------------------------------------------------
+      # Checkout Repository
+      # --------------------------------------------------------
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+
+      # --------------------------------------------------------
+      # Login to Docker Hub
+      # --------------------------------------------------------
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -155,9 +212,17 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
 
+      # --------------------------------------------------------
+      # Docker Buildx
+      # --------------------------------------------------------
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+
+      # --------------------------------------------------------
+      # Build and Push Docker Image
+      # --------------------------------------------------------
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
@@ -169,7 +234,6 @@ jobs:
 
           tags: |
             ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.image_tag }}
-            ${{ env.IMAGE_NAME }}:latest
 
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -189,96 +253,258 @@ jobs:
 
     steps:
 
+      # --------------------------------------------------------
+      # Deploy to EC2
+      # --------------------------------------------------------
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2
+
         with:
+
           host: ${{ secrets.EC2_HOST }}
+
           username: ${{ secrets.EC2_USER }}
+
           key: ${{ secrets.EC2_SSH_KEY }}
 
           script: |
 
             set -e
 
-            # --------------------------------------------------
-            # Application directory
-            # --------------------------------------------------
+
+            # ==================================================
+            # APPLICATION DIRECTORY
+            # ==================================================
 
             cd /home/ec2-user/assal-kolhapuri-dryfruits
 
 
             echo "========================================"
-            echo "Starting deployment"
+            echo "Starting Deployment"
             echo "========================================"
 
 
-            # --------------------------------------------------
-            # Pull latest Compose configuration
-            # --------------------------------------------------
+            # ==================================================
+            # PULL LATEST REPOSITORY
+            # ==================================================
 
             echo "Pulling latest repository..."
 
             git pull origin main
 
 
-            # --------------------------------------------------
-            # Set exact Git SHA image tag
-            # --------------------------------------------------
+            # ==================================================
+            # SET EXACT GIT SHA IMAGE TAG
+            # ==================================================
 
             export IMAGE_TAG=${{ needs.prepare.outputs.image_tag }}
 
+
+            echo "========================================"
+            echo "Deployment Image"
+            echo "========================================"
+
+            echo "Full Git SHA:"
+            git rev-parse HEAD
+
             echo "IMAGE_TAG=${IMAGE_TAG}"
 
-            echo "Docker image:"
-            echo "ranjit1984/assal-kolhapuri-dryfruits-api:${IMAGE_TAG}"
+            echo "Docker Image:"
+            echo "${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
 
 
-            # --------------------------------------------------
-            # Verify Docker Compose configuration
-            # --------------------------------------------------
+            # ==================================================
+            # VERIFY DOCKER COMPOSE CONFIGURATION
+            # ==================================================
 
-            echo "Docker Compose configuration:"
+            echo "========================================"
+            echo "Docker Compose Configuration"
+            echo "========================================"
 
             docker compose config | grep -A5 -B2 'image:'
 
 
-            # --------------------------------------------------
-            # Pull exact Docker image
-            # --------------------------------------------------
+            # ==================================================
+            # PULL EXACT DOCKER IMAGE
+            # ==================================================
 
-            echo "Pulling API image..."
+            echo "========================================"
+            echo "Pulling Docker Image"
+            echo "========================================"
 
             docker compose pull api
 
 
-            # --------------------------------------------------
-            # Recreate API container
-            # --------------------------------------------------
+            # ==================================================
+            # RECREATE API CONTAINER
+            # ==================================================
 
-            echo "Recreating API container..."
+            echo "========================================"
+            echo "Recreating API Container"
+            echo "========================================"
 
             docker compose up -d --force-recreate api
 
 
-            # --------------------------------------------------
-            # Deployment status
-            # --------------------------------------------------
+            # ==================================================
+            # WAIT FOR APPLICATION
+            # ==================================================
 
-            echo "Deployment status:"
+            echo "Waiting for API container..."
+
+            sleep 10
+
+
+            # ==================================================
+            # CONTAINER STATUS
+            # ==================================================
+
+            echo "========================================"
+            echo "Container Status"
+            echo "========================================"
 
             docker compose ps
 
 
-            # --------------------------------------------------
-            # Verify actual running image
-            # --------------------------------------------------
+            # ==================================================
+            # VERIFY CONTAINER IS RUNNING
+            # ==================================================
 
-            echo "Running API image:"
+            if [ "$(docker inspect -f '{{.State.Running}}' assal-api)" != "true" ]; then
 
-            docker inspect assal-api \
-              --format '{{.Config.Image}}'
+              echo "ERROR: assal-api container is not running."
 
+              echo "Container logs:"
+
+              docker logs --tail 100 assal-api
+
+              exit 1
+
+            fi
+
+
+            echo "API container is running."
+
+
+            # ==================================================
+            # VERIFY ACTUAL RUNNING IMAGE
+            # ==================================================
 
             echo "========================================"
-            echo "Deployment completed"
+            echo "Running API Image"
             echo "========================================"
+
+            RUNNING_IMAGE=$(docker inspect assal-api \
+              --format '{{.Config.Image}}')
+
+
+            EXPECTED_IMAGE="${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+
+
+            echo "Expected Image:"
+            echo "${EXPECTED_IMAGE}"
+
+            echo "Running Image:"
+            echo "${RUNNING_IMAGE}"
+
+
+            # ==================================================
+            # IMAGE VERIFICATION
+            # ==================================================
+
+            if [ "${RUNNING_IMAGE}" != "${EXPECTED_IMAGE}" ]; then
+
+              echo "ERROR: Running image does not match expected image."
+
+              exit 1
+
+            fi
+
+
+            echo "Image verification PASSED."
+
+
+            # ==================================================
+            # DEPLOYMENT COMPLETE
+            # ==================================================
+
+            echo "========================================"
+            echo "EC2 Deployment Completed"
+            echo "========================================"
+
+
+      # ========================================================
+      # 6. PRODUCTION SMOKE TEST
+      # ========================================================
+
+      - name: Smoke Test
+        run: |
+
+          echo "========================================"
+          echo "Running Production Smoke Test"
+          echo "========================================"
+
+
+          echo "Testing API endpoint:"
+
+          echo "http://${{ secrets.EC2_HOST }}/health"
+
+
+          # ----------------------------------------------------
+          # Call API
+          # ----------------------------------------------------
+
+          RESPONSE=$(curl \
+            --fail \
+            --silent \
+            --show-error \
+            --max-time 30 \
+            http://${{ secrets.EC2_HOST }}/health)
+
+
+          echo "========================================"
+          echo "API Response"
+          echo "========================================"
+
+          echo "${RESPONSE}"
+
+
+          # ----------------------------------------------------
+          # Validate API Response
+          # ----------------------------------------------------
+
+          echo "========================================"
+          echo "Validating API Health"
+          echo "========================================"
+
+
+          echo "${RESPONSE}" | grep '"status":"healthy"'
+
+
+          echo "========================================"
+          echo "Smoke Test PASSED"
+          echo "========================================"
+
+
+      # ========================================================
+      # 7. DEPLOYMENT SUCCESS
+      # ========================================================
+
+      - name: Deployment Successful
+        run: |
+
+          echo "========================================"
+          echo "DEPLOYMENT SUCCESSFUL"
+          echo "========================================"
+
+          echo "Docker Image:"
+          echo "${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.image_tag }}"
+
+          echo "Environment:"
+          echo "AWS EC2"
+
+          echo "Health Check:"
+          echo "PASSED"
+
+          echo "========================================"
