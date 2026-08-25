@@ -31,35 +31,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Verify Docker build context
-        run: |
-          echo "========================================"
-          echo "GitHub SHA: $GITHUB_SHA"
-          echo "GitHub REF: $GITHUB_REF"
-          echo "Working directory: $(pwd)"
-          echo "========================================"
-
-          echo ""
-          echo "Docker version:"
-          docker --version
-
-          echo ""
-          echo "Dockerfile:"
-          echo "========================================"
-          cat Dockerfile
-          echo "========================================"
-
-          echo ""
-          echo "Checking for Go-related files:"
-          find . -name '.go-version' -o -name 'Dockerfile*' -print
-
-          echo ""
-          echo "Repository files:"
-          find . -maxdepth 2 -type f \
-            ! -path './.git/*' \
-            ! -path './node_modules/*' \
-            | sort
-
       - name: Build Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
