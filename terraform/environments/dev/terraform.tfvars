@@ -12,3 +12,7 @@ private_subnet_cidrs = [
   "10.0.11.0/24",
   "10.0.12.0/24"
 ]
+
+instance_type = "t3.micro"
+
+ssh_cidr = "223.191.88.243/32"

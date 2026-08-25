@@ -17,3 +17,10 @@ node_modules/
 # Local Docker backup files
 Dockerfile.backup
 /ssl
+
+# Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/tfplan
