@@ -8,6 +8,15 @@ variable "github_owner" {
   type        = string
 }
 
+variable "github_owner_id" {
+  description = "GitHub owner ID used in the OIDC subject"
+  type        = string
+}
+
+variable "github_repository_id" {
+  description = "GitHub repository ID used in the OIDC subject"
+  type        = string
+}
 variable "github_repository" {
   description = "GitHub repository name"
   type        = string

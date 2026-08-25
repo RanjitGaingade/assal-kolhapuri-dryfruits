@@ -91,10 +91,12 @@ module "ecr" {
 module "github_oidc" {
   source = "../../modules/github-oidc"
 
-  name              = var.project_name
-  github_owner      = "RanjitGaingade"
-  github_repository = "assal-kolhapuri-dryfruits"
-  github_branch     = "main"
+  name                 = var.project_name
+  github_owner         = "RanjitGaingade"
+  github_owner_id      = "313410174"
+  github_repository    = "assal-kolhapuri-dryfruits"
+  github_repository_id = "1328946065"
+  github_branch        = "aws-terraform-infra"
 
   ecr_repository_arn = module.ecr.repository_arn
 
