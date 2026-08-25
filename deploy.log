@@ -1,0 +1,148 @@
+Deploy to EC2	Set up job	﻿2026-08-16T18:44:04.2799482Z Current runner version: '2.336.0'
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2826203Z ##[group]Runner Image Provisioner
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2827437Z Hosted Compute Agent
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2828224Z Version: 20260729.566
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2828994Z Commit: cf7153fe6e25b664e8693c24944bf2b00355d109
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2829921Z Build Date: 2026-07-29T19:17:02Z
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2830760Z Worker ID: {cb915b12-9bf7-4189-82fc-fdf3e95fe045}
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2831644Z Azure Region: westus3
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2832356Z ##[endgroup]
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2834364Z ##[group]Operating System
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2835229Z Ubuntu
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2835844Z 24.04.4
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2836518Z LTS
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2837347Z ##[endgroup]
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2838088Z ##[group]Runner Image
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2838801Z Image: ubuntu-24.04
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2839518Z Version: 20260810.271.1
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2840721Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260810.271/images/ubuntu/Ubuntu2404-Readme.md
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2842600Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260810.271
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2843724Z ##[endgroup]
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2845121Z ##[group]GITHUB_TOKEN Permissions
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2847671Z Contents: read
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2848406Z Metadata: read
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2849155Z Packages: read
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2849972Z ##[endgroup]
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2852268Z Secret source: Actions
+Deploy to EC2	Set up job	2026-08-16T18:44:04.2853547Z Prepare workflow directory
+Deploy to EC2	Set up job	2026-08-16T18:44:04.3210747Z Prepare all required actions
+Deploy to EC2	Set up job	2026-08-16T18:44:04.3261264Z Getting action download info
+Deploy to EC2	Set up job	2026-08-16T18:44:04.6321379Z Download action repository 'appleboy/ssh-action@v1.2.2' (SHA:2ead5e36573f08b82fbfce1504f1a4b05a647c6f)
+Deploy to EC2	Set up job	2026-08-16T18:44:05.3977738Z Complete job name: Deploy to EC2
+Deploy to EC2	Deploy to EC2	﻿2026-08-16T18:44:05.4951399Z ##[group]Run appleboy/ssh-action@v1.2.2
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4952533Z with:
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4953332Z   host: ***
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4953886Z   username: ***
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4957763Z   key: ***
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4959952Z   script: 
+Deploy to EC2	Deploy to EC2	set -e
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	cd /home/***/assal-kolhapuri-dryfruits
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Pulling latest repository..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	git pull origin main
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Pulling latest API image..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	docker compose pull api
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Recreating API container..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	docker compose up -d --force-recreate api
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Deployment status..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	docker compose ps
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4962207Z   port: 22
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4962722Z   protocol: tcp
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4963270Z   timeout: 30s
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4963812Z   command_timeout: 10m
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4964380Z   proxy_port: 22
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4964950Z   proxy_protocol: tcp
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4965537Z   proxy_timeout: 30s
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4966110Z   capture_stdout: false
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.4967190Z ##[endgroup]
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5040502Z ##[start-action display=Set GitHub Path;id=__appleboy_ssh-action.__run]
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5091200Z ##[group]Run echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5092174Z ^[[36;1mecho "$GITHUB_ACTION_PATH" >> $GITHUB_PATH^[[0m
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5135431Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5136260Z env:
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5137299Z   GITHUB_ACTION_PATH: /home/runner/work/_actions/appleboy/ssh-action/v1.2.2
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5138222Z ##[endgroup]
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5337414Z ##[end-action id=__appleboy_ssh-action.__run;outcome=success;conclusion=success;duration_ms=29]
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5352851Z ##[start-action display=Run entrypoint.sh;id=__appleboy_ssh-action.entrypoint]
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5381660Z ##[group]Run entrypoint.sh
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5382334Z ^[[36;1mentrypoint.sh^[[0m
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5422936Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5423795Z env:
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5424576Z   GITHUB_ACTION_PATH: /home/runner/work/_actions/appleboy/ssh-action/v1.2.2
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5425840Z   INPUT_HOST: ***
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5426407Z   INPUT_PORT: 22
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5427160Z   INPUT_PROTOCOL: tcp
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5428221Z   INPUT_USERNAME: ***
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5428821Z   INPUT_PASSWORD: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5429375Z   INPUT_PASSPHRASE: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5433233Z   INPUT_KEY: ***
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5433802Z   INPUT_KEY_PATH: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5434371Z   INPUT_FINGERPRINT: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5434937Z   INPUT_PROXY_HOST: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5435529Z   INPUT_PROXY_PORT: 22
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5436108Z   INPUT_PROXY_USERNAME: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5436913Z   INPUT_PROXY_PASSWORD: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5437555Z   INPUT_PROXY_PASSPHRASE: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5438177Z   INPUT_PROXY_KEY: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5438751Z   INPUT_PROXY_KEY_PATH: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5439350Z   INPUT_PROXY_FINGERPRINT: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5439961Z   INPUT_TIMEOUT: 30s
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5440537Z   INPUT_PROXY_TIMEOUT: 30s
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5441143Z   INPUT_COMMAND_TIMEOUT: 10m
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5443628Z   INPUT_SCRIPT: 
+Deploy to EC2	Deploy to EC2	set -e
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	cd /home/***/assal-kolhapuri-dryfruits
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Pulling latest repository..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	git pull origin main
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Pulling latest API image..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	docker compose pull api
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Recreating API container..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	docker compose up -d --force-recreate api
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	echo "Deployment status..."
+Deploy to EC2	Deploy to EC2	
+Deploy to EC2	Deploy to EC2	docker compose ps
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5446110Z   INPUT_SCRIPT_FILE: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5446807Z   INPUT_ENVS: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5447364Z   INPUT_ENVS_FORMAT: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5447937Z   INPUT_DEBUG: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5448470Z   INPUT_ALL_ENVS: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5449023Z   INPUT_REQUEST_PTY: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5449609Z   INPUT_USE_INSECURE_CIPHER: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5450230Z   INPUT_CIPHER: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5450793Z   INPUT_PROXY_USE_INSECURE_CIPHER: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5451455Z   INPUT_PROXY_CIPHER: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5452047Z   INPUT_SYNC: 
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5452608Z   INPUT_CAPTURE_STDOUT: false
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5453217Z ##[endgroup]
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.5593876Z Will download drone-ssh-1.8.1-linux-amd64 from https://github.com/appleboy/drone-ssh/releases/download/v1.8.1
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.9352064Z ======= CLI Version =======
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.9379188Z Drone SSH version 1.8.1
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:05.9383231Z ===========================
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:35.9420553Z 2026/08/16 18:44:35 dial tcp 15.252.140.101:22: i/o timeout
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:35.9442916Z ##[error]Process completed with exit code 1.
+Deploy to EC2	Deploy to EC2	2026-08-16T18:44:35.9456656Z ##[end-action id=__appleboy_ssh-action.entrypoint;outcome=failure;conclusion=failure;duration_ms=30410]
+Deploy to EC2	Complete job	﻿2026-08-16T18:44:35.9595941Z Cleaning up orphan processes

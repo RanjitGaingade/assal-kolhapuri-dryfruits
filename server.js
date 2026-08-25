@@ -30,14 +30,15 @@ app.get("/", (req, res) => {
 
 // Health check
 app.get("/health", (req, res) => {
-  res.json({
-    status: "healthy"
+  res.status(200).json({
+    status: "healthy",
+    service: "assal-api"
   });
 });
 
 // API health check
 app.get("/api/health", (req, res) => {
-  res.json({
+  res.status(200).json({
     application: "Assal Kolhapuri Dryfruits",
     status: "running"
   });
@@ -112,3 +113,4 @@ app.listen(PORT, "0.0.0.0", () => {
     "Assal Kolhapuri Dryfruits API running on port " + PORT
   );
 });
+
