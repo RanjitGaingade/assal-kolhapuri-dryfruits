@@ -12,6 +12,7 @@ node_modules/
 # Database backups
 *.backup
 *.dump
+*.log
 
 # Local Docker backup files
 Dockerfile.backup
