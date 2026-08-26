@@ -38,7 +38,8 @@ module "vpc" {
 module "iam" {
   source = "../../modules/iam"
 
-  name = var.project_name
+  name           = var.project_name
+  rds_secret_arn = module.rds.master_user_secret_arn
 
   tags = {
     Project     = "Assal-Kolhapuri-Dryfruits"
@@ -76,6 +77,27 @@ module "ec2" {
   }
 }
 
+module "rds" {
+  source = "../../modules/rds"
+
+  name = var.project_name
+
+  vpc_id = module.vpc.vpc_id
+
+  private_subnet_ids = module.vpc.private_subnet_ids
+
+  ec2_security_group_id = module.security_group.security_group_id
+
+  database_name     = var.database_name
+  database_username = var.database_username
+
+  tags = {
+    Project     = "Assal-Kolhapuri-Dryfruits"
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+  }
+}
+
 module "ecr" {
   source = "../../modules/ecr"
 
@@ -99,6 +121,10 @@ module "github_oidc" {
   github_branch        = "aws-terraform-infra"
 
   ecr_repository_arn = module.ecr.repository_arn
+
+  ec2_instance_id = module.ec2.instance_id
+  aws_region      = var.aws_region
+
 
   tags = {
     Project     = "Assal-Kolhapuri-Dryfruits"

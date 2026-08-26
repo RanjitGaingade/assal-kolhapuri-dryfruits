@@ -29,6 +29,7 @@ jobs:
           role-session-name: github-actions-${{ github.run_id }}
           retry-max-attempts: 1
           mask-aws-account-id: false
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -48,3 +49,67 @@ jobs:
         run: |
           docker push $ECR_REGISTRY/${ECR_REPOSITORY}:${GITHUB_SHA}
           docker push $ECR_REGISTRY/${ECR_REPOSITORY}:latest
+
+      - name: Deploy to EC2 via SSM
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+          EC2_INSTANCE_ID: i-04ffba9d048c439f9
+          ECR_REPOSITORY: assal-kolhapuri-api
+          RDS_SECRET_ARN: arn:aws:secretsmanager:ap-south-1:104367407330:secret:rds!db-bef30228-9bf0-4e7a-859c-a9944b000ecb-g3qz9R
+          RDS_ENDPOINT: assal-kolhapuri-postgres.c3cgkeymu7my.ap-south-1.rds.amazonaws.com
+          RDS_DATABASE: assalkolhapuri
+          RDS_USERNAME: postgres
+
+        run: |
+          set -e
+
+          COMMAND_ID=$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands="set -e
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+          docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker stop assal-kolhapuri-api || true
+          docker rm assal-kolhapuri-api || true
+          DB_PASSWORD=\$(aws secretsmanager get-secret-value --region $AWS_REGION --secret-id '$RDS_SECRET_ARN' --query SecretString --output text | python3 -c 'import sys,json,urllib.parse; print(urllib.parse.quote(json.load(sys.stdin)[\"password\"], safe=\"\"))')
+          DATABASE_URL=\"postgresql://$RDS_USERNAME:\$DB_PASSWORD@$RDS_ENDPOINT:5432/$RDS_DATABASE\"
+          docker run -d --name assal-kolhapuri-api -p 3000:3000 -e PORT=3000 -e NODE_ENV=production -e DATABASE_URL=\"\$DATABASE_URL\" $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          sleep 5
+          docker ps
+          docker logs --tail 50 assal-kolhapuri-api
+          curl -fsS http://localhost:3000/health" \
+            --query 'Command.CommandId' \
+            --output text
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID"
+
+          STATUS=$(aws ssm get-command-invocation \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --query 'Status' \
+            --output text)
+
+          echo "SSM deployment status: $STATUS"
+
+          aws ssm get-command-invocation \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
+            --output json
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "Deployment failed."
+            exit 1
+          fi
+
+          echo "Deployment completed successfully."

@@ -61,3 +61,33 @@ output "github_oidc_provider_arn" {
   description = "GitHub OIDC provider ARN"
   value       = module.github_oidc.oidc_provider_arn
 }
+
+output "rds_instance_id" {
+  description = "RDS instance ID"
+  value       = module.rds.db_instance_id
+}
+
+output "rds_endpoint" {
+  description = "RDS PostgreSQL endpoint"
+  value       = module.rds.db_endpoint
+}
+
+output "rds_port" {
+  description = "RDS PostgreSQL port"
+  value       = module.rds.db_port
+}
+
+output "rds_database_name" {
+  description = "RDS database name"
+  value       = module.rds.db_name
+}
+
+output "rds_username" {
+  description = "RDS database username"
+  value       = module.rds.db_username
+}
+
+output "rds_security_group_id" {
+  description = "RDS security group ID"
+  value       = module.rds.rds_security_group_id
+}

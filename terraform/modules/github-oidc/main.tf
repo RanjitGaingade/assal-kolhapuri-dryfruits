@@ -90,3 +90,34 @@ resource "aws_iam_role_policy" "ecr_push" {
   role   = aws_iam_role.github_actions.id
   policy = data.aws_iam_policy_document.ecr_push.json
 }
+
+data "aws_iam_policy_document" "ssm_deploy" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "ssm:SendCommand"
+    ]
+
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${var.ec2_instance_id}",
+      "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetCommandInvocation"
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "ssm_deploy" {
+  name   = "${var.name}-github-ssm-deploy"
+  role   = aws_iam_role.github_actions.id
+  policy = data.aws_iam_policy_document.ssm_deploy.json
+}

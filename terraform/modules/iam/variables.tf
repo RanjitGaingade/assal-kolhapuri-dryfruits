@@ -8,3 +8,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "rds_secret_arn" {
+  description = "ARN of the RDS-managed Secrets Manager secret"
+  type        = string
+}

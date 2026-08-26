@@ -38,3 +38,13 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "ec2_instance_id" {
+  description = "EC2 instance ID used for SSM deployments"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region used for SSM deployment"
+  type        = string
+}

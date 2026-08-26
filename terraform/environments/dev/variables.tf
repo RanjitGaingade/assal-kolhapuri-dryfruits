@@ -45,3 +45,15 @@ variable "ssh_cidr" {
   description = "Your public IP in CIDR notation for SSH access"
   type        = string
 }
+
+variable "database_name" {
+  description = "PostgreSQL database name"
+  type        = string
+  default     = "assalkolhapuri"
+}
+
+variable "database_username" {
+  description = "PostgreSQL username"
+  type        = string
+  default     = "postgres"
+}
