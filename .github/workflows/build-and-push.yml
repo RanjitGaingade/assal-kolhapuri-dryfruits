@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - aws-terraform-infra
-
+workflow_dispatch:
 permissions:
   id-token: write
   contents: read
