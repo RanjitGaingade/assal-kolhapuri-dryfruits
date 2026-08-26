@@ -39,15 +39,28 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
+          set -e
+
+          echo "Building Docker image..."
           docker build \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA" \
             .
+
+          echo "Image built successfully:"
+          docker images "$ECR_REGISTRY/$ECR_REPOSITORY"
 
       - name: Push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
+          set -e
+
+          echo "Pushing image:"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA"
+
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA"
+
+          echo "Docker image pushed successfully."
 
       - name: Deploy to EC2 via SSM
         env:
@@ -63,78 +76,167 @@ jobs:
         run: |
           set -e
 
-          COMMANDS=$(cat <<EOF
+          echo "Preparing EC2 deployment script..."
+
+          cat > /tmp/deploy.sh <<'SCRIPT'
+          #!/bin/bash
           set -e
 
-          aws ecr get-login-password --region "$AWS_REGION" | \
-            docker login --username AWS --password-stdin "$ECR_REGISTRY"
+          echo "========================================"
+          echo "Starting EC2 deployment"
+          echo "========================================"
 
-          docker pull "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "AWS Region: ${AWS_REGION}"
+          echo "ECR Repository: ${ECR_REPOSITORY}"
+          echo "Image Tag: ${IMAGE_TAG}"
+
+          echo ""
+          echo "1. Logging in to ECR..."
+
+          aws ecr get-login-password \
+            --region "${AWS_REGION}" | \
+            docker login \
+              --username AWS \
+              --password-stdin "${ECR_REGISTRY}"
+
+          echo "ECR login successful."
+
+          echo ""
+          echo "2. Pulling Docker image..."
+
+          docker pull "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          echo "Docker image pulled successfully."
+
+          echo ""
+          echo "3. Stopping existing container..."
 
           docker stop assal-kolhapuri-api || true
           docker rm assal-kolhapuri-api || true
 
-          DB_PASSWORD=\$(aws secretsmanager get-secret-value \
-            --region "$AWS_REGION" \
-            --secret-id "$RDS_SECRET_ARN" \
-            --query SecretString \
-            --output text | \
-            python3 -c 'import sys,json,urllib.parse; print(urllib.parse.quote(json.load(sys.stdin)["password"], safe=""))')
+          echo ""
+          echo "4. Retrieving database password from Secrets Manager..."
 
-          DATABASE_URL="postgresql://$RDS_USERNAME:\$DB_PASSWORD@$RDS_ENDPOINT:5432/$RDS_DATABASE"
+          DB_PASSWORD=$(
+            aws secretsmanager get-secret-value \
+              --region "${AWS_REGION}" \
+              --secret-id "${RDS_SECRET_ARN}" \
+              --query 'SecretString' \
+              --output text |
+            python3 -c 'import sys,json,urllib.parse; print(urllib.parse.quote(json.load(sys.stdin)["password"], safe=""))'
+          )
+
+          if [ -z "${DB_PASSWORD}" ]; then
+            echo "ERROR: Database password is empty."
+            exit 1
+          fi
+
+          echo "Database password retrieved successfully."
+
+          DATABASE_URL="postgresql://${RDS_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}:5432/${RDS_DATABASE}"
+
+          echo ""
+          echo "5. Starting new Docker container..."
 
           docker run -d \
             --name assal-kolhapuri-api \
             -p 3000:3000 \
             -e PORT=3000 \
             -e NODE_ENV=production \
-            -e DATABASE_URL="\$DATABASE_URL" \
-            "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+            -e DATABASE_URL="${DATABASE_URL}" \
+            "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
-          sleep 5
+          echo ""
+          echo "6. Waiting for application to start..."
 
-          docker ps
+          sleep 10
 
-          docker logs --tail 50 assal-kolhapuri-api
+          echo ""
+          echo "7. Docker container status..."
 
-          curl -fsS http://localhost:3000/health
-          EOF
-          )
+          docker ps \
+            --filter "name=assal-kolhapuri-api"
+
+          echo ""
+          echo "8. Docker container logs..."
+
+          docker logs --tail 100 assal-kolhapuri-api
+
+          echo ""
+          echo "9. Health check..."
+
+          curl -fsS \
+            --max-time 10 \
+            http://localhost:3000/health
+
+          echo ""
+          echo "========================================"
+          echo "Deployment completed successfully."
+          echo "========================================"
+          SCRIPT
+
+          echo "Encoding deployment script..."
+
+          DEPLOY_SCRIPT=$(base64 -w 0 /tmp/deploy.sh)
+
+          echo "Sending deployment command to EC2..."
 
           COMMAND_ID=$(aws ssm send-command \
-            --region "$AWS_REGION" \
-            --instance-ids "$EC2_INSTANCE_ID" \
+            --region "${AWS_REGION}" \
+            --instance-ids "${EC2_INSTANCE_ID}" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=$(printf '%s' "$COMMANDS" | jq -Rs '[.]')" \
+            --parameters "commands=[\"echo ${DEPLOY_SCRIPT} | base64 -d > /tmp/deploy.sh && chmod +x /tmp/deploy.sh && AWS_REGION='${AWS_REGION}' ECR_REGISTRY='${ECR_REGISTRY}' ECR_REPOSITORY='${ECR_REPOSITORY}' IMAGE_TAG='${IMAGE_TAG}' RDS_SECRET_ARN='${RDS_SECRET_ARN}' RDS_ENDPOINT='${RDS_ENDPOINT}' RDS_DATABASE='${RDS_DATABASE}' RDS_USERNAME='${RDS_USERNAME}' /tmp/deploy.sh\"]" \
             --query 'Command.CommandId' \
             --output text)
 
-          echo "SSM Command ID: $COMMAND_ID"
+          echo ""
+          echo "SSM Command ID: ${COMMAND_ID}"
+          echo ""
+
+          echo "Waiting for EC2 deployment..."
+
+          set +e
 
           aws ssm wait command-executed \
-            --region "$AWS_REGION" \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$EC2_INSTANCE_ID"
+            --region "${AWS_REGION}" \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}"
+
+          set -e
+
+          echo ""
+          echo "========================================"
+          echo "SSM command result"
+          echo "========================================"
 
           STATUS=$(aws ssm get-command-invocation \
-            --region "$AWS_REGION" \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$EC2_INSTANCE_ID" \
+            --region "${AWS_REGION}" \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}" \
             --query 'Status' \
             --output text)
 
-          echo "SSM deployment status: $STATUS"
+          echo "Status: ${STATUS}"
+
+          echo ""
+          echo "SSM output/error:"
 
           aws ssm get-command-invocation \
-            --region "$AWS_REGION" \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$EC2_INSTANCE_ID" \
+            --region "${AWS_REGION}" \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}" \
             --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
             --output json
 
-          if [ "$STATUS" != "Success" ]; then
+          if [ "${STATUS}" != "Success" ]; then
+            echo ""
+            echo "========================================"
             echo "Deployment failed."
+            echo "========================================"
             exit 1
           fi
 
-          echo "Deployment completed successfully."
+          echo ""
+          echo "========================================"
+          echo "Deployment successful."
+          echo "========================================"
