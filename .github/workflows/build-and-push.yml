@@ -5,6 +5,7 @@ on:
     branches:
       - aws-terraform-infra
   workflow_dispatch:
+
 permissions:
   id-token: write
   contents: read
@@ -39,14 +40,14 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           docker build \
-            -t $ECR_REGISTRY/${ECR_REPOSITORY}:${GITHUB_SHA} \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA" \
             .
 
       - name: Push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker push $ECR_REGISTRY/${ECR_REPOSITORY}:${GITHUB_SHA}
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA"
 
       - name: Deploy to EC2 via SSM
         env:
@@ -59,28 +60,54 @@ jobs:
           RDS_ENDPOINT: assal-kolhapuri-postgres.c3cgkeymu7my.ap-south-1.rds.amazonaws.com
           RDS_DATABASE: assalkolhapuri
           RDS_USERNAME: postgres
-
         run: |
           set -e
+
+          COMMANDS=$(cat <<EOF
+          set -e
+
+          aws ecr get-login-password --region "$AWS_REGION" | \
+            docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+          docker pull "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          docker stop assal-kolhapuri-api || true
+          docker rm assal-kolhapuri-api || true
+
+          DB_PASSWORD=\$(aws secretsmanager get-secret-value \
+            --region "$AWS_REGION" \
+            --secret-id "$RDS_SECRET_ARN" \
+            --query SecretString \
+            --output text | \
+            python3 -c 'import sys,json,urllib.parse; print(urllib.parse.quote(json.load(sys.stdin)["password"], safe=""))')
+
+          DATABASE_URL="postgresql://$RDS_USERNAME:\$DB_PASSWORD@$RDS_ENDPOINT:5432/$RDS_DATABASE"
+
+          docker run -d \
+            --name assal-kolhapuri-api \
+            -p 3000:3000 \
+            -e PORT=3000 \
+            -e NODE_ENV=production \
+            -e DATABASE_URL="\$DATABASE_URL" \
+            "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          sleep 5
+
+          docker ps
+
+          docker logs --tail 50 assal-kolhapuri-api
+
+          curl -fsS http://localhost:3000/health
+          EOF
+          )
 
           COMMAND_ID=$(aws ssm send-command \
             --region "$AWS_REGION" \
             --instance-ids "$EC2_INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands="set -e
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
-          docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker stop assal-kolhapuri-api || true
-          docker rm assal-kolhapuri-api || true
-          DB_PASSWORD=\$(aws secretsmanager get-secret-value --region $AWS_REGION --secret-id '$RDS_SECRET_ARN' --query SecretString --output text | python3 -c 'import sys,json,urllib.parse; print(urllib.parse.quote(json.load(sys.stdin)[\"password\"], safe=\"\"))')
-          DATABASE_URL=\"postgresql://$RDS_USERNAME:\$DB_PASSWORD@$RDS_ENDPOINT:5432/$RDS_DATABASE\"
-          docker run -d --name assal-kolhapuri-api -p 3000:3000 -e PORT=3000 -e NODE_ENV=production -e DATABASE_URL=\"\$DATABASE_URL\" $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          sleep 5
-          docker ps
-          docker logs --tail 50 assal-kolhapuri-api
-          curl -fsS http://localhost:3000/health" \
+            --parameters "commands=$(printf '%s' "$COMMANDS" | jq -Rs '[.]')" \
             --query 'Command.CommandId' \
-            --output text
+            --output text)
 
           echo "SSM Command ID: $COMMAND_ID"
 
