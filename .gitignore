@@ -24,3 +24,5 @@ Dockerfile.backup
 **/*.tfstate.*
 **/*.tfplan
 **/tfplan
+.DS_Store
+terraform/.DS_Store
