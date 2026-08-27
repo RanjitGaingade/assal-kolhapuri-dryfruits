@@ -2,27 +2,27 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
-
 const {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } = require("@aws-sdk/client-s3");
-
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const multer = require("multer");
 
 const app = express();
 
 const PORT = process.env.PORT || 3000;
+
 const AWS_REGION = process.env.AWS_REGION || "ap-south-1";
 const S3_BUCKET = process.env.S3_PRODUCT_IMAGES_BUCKET;
 
 if (!S3_BUCKET) {
   console.warn(
-    "WARNING: S3_PRODUCT_IMAGES_BUCKET environment variable is not set."
+    "WARNING: S3_PRODUCT_IMAGES_BUCKET environment variable is not set.",
   );
 }
 
@@ -36,7 +36,7 @@ const adapter = new PrismaPg({
     rejectUnauthorized: true,
     ca: fs.readFileSync(
       path.join(__dirname, "certs", "global-bundle.pem"),
-      "utf8"
+      "utf8",
     ),
   },
 });
@@ -59,11 +59,9 @@ const s3 = new S3Client({
 
 const upload = multer({
   storage: multer.memoryStorage(),
-
   limits: {
     fileSize: 5 * 1024 * 1024,
   },
-
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith("image/")) {
       return cb(new Error("Only image files are allowed"));
@@ -120,7 +118,29 @@ app.get("/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
 
-    res.json(products);
+    const productsWithImageUrls = await Promise.all(
+      products.map(async (product) => {
+        if (!product.image || !S3_BUCKET) {
+          return product;
+        }
+
+        const command = new GetObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: product.image,
+        });
+
+        const imageUrl = await getSignedUrl(s3, command, {
+          expiresIn: 3600,
+        });
+
+        return {
+          ...product,
+          image: imageUrl,
+        };
+      }),
+    );
+
+    res.json(productsWithImageUrls);
   } catch (error) {
     console.error("Failed to fetch products:", error);
 
@@ -138,7 +158,29 @@ app.get("/api/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
 
-    res.json(products);
+    const productsWithImageUrls = await Promise.all(
+      products.map(async (product) => {
+        if (!product.image || !S3_BUCKET) {
+          return product;
+        }
+
+        const command = new GetObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: product.image,
+        });
+
+        const imageUrl = await getSignedUrl(s3, command, {
+          expiresIn: 3600,
+        });
+
+        return {
+          ...product,
+          image: imageUrl,
+        };
+      }),
+    );
+
+    res.json(productsWithImageUrls);
   } catch (error) {
     console.error("Failed to fetch products:", error);
 
@@ -162,14 +204,8 @@ app.post("/products", upload.single("image"), async (req, res) => {
       });
     }
 
-    const {
-      name,
-      sku,
-      category,
-      purchasePrice,
-      sellingPrice,
-      stockQuantity,
-    } = req.body;
+    const { name, sku, category, purchasePrice, sellingPrice, stockQuantity } =
+      req.body;
 
     if (
       !name ||
@@ -202,7 +238,7 @@ app.post("/products", upload.single("image"), async (req, res) => {
           Key: s3Key,
           Body: req.file.buffer,
           ContentType: req.file.mimetype,
-        })
+        }),
       );
     }
 
@@ -222,7 +258,29 @@ app.post("/products", upload.single("image"), async (req, res) => {
       },
     });
 
-    res.status(201).json(product);
+    // ----------------------------------------
+    // Return product with presigned image URL
+    // ----------------------------------------
+
+    let responseProduct = product;
+
+    if (product.image && S3_BUCKET) {
+      const command = new GetObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: product.image,
+      });
+
+      const imageUrl = await getSignedUrl(s3, command, {
+        expiresIn: 3600,
+      });
+
+      responseProduct = {
+        ...product,
+        image: imageUrl,
+      };
+    }
+
+    res.status(201).json(responseProduct);
   } catch (error) {
     console.error("Failed to create product:", error);
 
@@ -236,7 +294,7 @@ app.post("/products", upload.single("image"), async (req, res) => {
           new DeleteObjectCommand({
             Bucket: S3_BUCKET,
             Key: s3Key,
-          })
+          }),
         );
 
         console.log("Cleaned up uploaded S3 image:", s3Key);
