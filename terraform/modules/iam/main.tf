@@ -57,3 +57,43 @@ resource "aws_iam_role_policy" "rds_secret_read" {
     ]
   })
 }
+
+
+data "aws_iam_policy_document" "ec2_s3_product_images" {
+  statement {
+    sid = "ListProductImageBucket"
+
+    effect = "Allow"
+
+    actions = [
+      "s3:ListBucket"
+    ]
+
+    resources = [
+      var.product_images_bucket_arn
+    ]
+  }
+
+  statement {
+    sid = "ManageProductImages"
+
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject"
+    ]
+
+    resources = [
+      "${var.product_images_bucket_arn}/products/*"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "ec2_s3_product_images" {
+  name = "assal-kolhapuri-ec2-product-images"
+  role = aws_iam_role.ec2.id
+
+  policy = data.aws_iam_policy_document.ec2_s3_product_images.json
+}

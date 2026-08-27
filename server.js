@@ -1,13 +1,30 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} = require("@aws-sdk/client-s3");
+
+const multer = require("multer");
+
 const app = express();
 
 const PORT = process.env.PORT || 3000;
+const AWS_REGION = process.env.AWS_REGION || "ap-south-1";
+const S3_BUCKET = process.env.S3_PRODUCT_IMAGES_BUCKET;
+
+if (!S3_BUCKET) {
+  console.warn(
+    "WARNING: S3_PRODUCT_IMAGES_BUCKET environment variable is not set."
+  );
+}
 
 // ========================================
 // PRISMA / POSTGRESQL
@@ -26,6 +43,34 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({
   adapter,
+});
+
+// ========================================
+// AWS S3
+// ========================================
+
+const s3 = new S3Client({
+  region: AWS_REGION,
+});
+
+// ========================================
+// MULTER
+// ========================================
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("Only image files are allowed"));
+    }
+
+    cb(null, true);
+  },
 });
 
 // ========================================
@@ -74,6 +119,7 @@ app.get("/api/health", (req, res) => {
 app.get("/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
+
     res.json(products);
   } catch (error) {
     console.error("Failed to fetch products:", error);
@@ -91,6 +137,7 @@ app.get("/products", async (req, res) => {
 app.get("/api/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
+
     res.json(products);
   } catch (error) {
     console.error("Failed to fetch products:", error);
@@ -105,15 +152,98 @@ app.get("/api/products", async (req, res) => {
 // CREATE PRODUCT
 // ========================================
 
-app.post("/products", async (req, res) => {
+app.post("/products", upload.single("image"), async (req, res) => {
+  let s3Key = null;
+
   try {
+    if (!S3_BUCKET) {
+      return res.status(500).json({
+        error: "S3 product image bucket is not configured",
+      });
+    }
+
+    const {
+      name,
+      sku,
+      category,
+      purchasePrice,
+      sellingPrice,
+      stockQuantity,
+    } = req.body;
+
+    if (
+      !name ||
+      !sku ||
+      !category ||
+      purchasePrice === undefined ||
+      sellingPrice === undefined
+    ) {
+      return res.status(400).json({
+        error:
+          "name, sku, category, purchasePrice and sellingPrice are required",
+      });
+    }
+
+    // ----------------------------------------
+    // Upload image to S3 if provided
+    // ----------------------------------------
+
+    if (req.file) {
+      const extension =
+        path.extname(req.file.originalname).toLowerCase() || ".jpg";
+
+      const uniqueName = `${crypto.randomUUID()}${extension}`;
+
+      s3Key = `products/${uniqueName}`;
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: s3Key,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
+        })
+      );
+    }
+
+    // ----------------------------------------
+    // Create product in PostgreSQL
+    // ----------------------------------------
+
     const product = await prisma.product.create({
-      data: req.body,
+      data: {
+        name,
+        sku,
+        category,
+        purchasePrice,
+        sellingPrice,
+        stockQuantity: stockQuantity ? Number(stockQuantity) : 0,
+        image: s3Key,
+      },
     });
 
     res.status(201).json(product);
   } catch (error) {
     console.error("Failed to create product:", error);
+
+    // ----------------------------------------
+    // Cleanup S3 if DB insert failed
+    // ----------------------------------------
+
+    if (s3Key && S3_BUCKET) {
+      try {
+        await s3.send(
+          new DeleteObjectCommand({
+            Bucket: S3_BUCKET,
+            Key: s3Key,
+          })
+        );
+
+        console.log("Cleaned up uploaded S3 image:", s3Key);
+      } catch (cleanupError) {
+        console.error("Failed to clean up S3 image:", cleanupError);
+      }
+    }
 
     res.status(500).json({
       error: "Failed to create product",

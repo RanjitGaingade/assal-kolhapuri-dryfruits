@@ -41,6 +41,8 @@ module "iam" {
   name           = var.project_name
   rds_secret_arn = module.rds.master_user_secret_arn
 
+  product_images_bucket_arn = module.s3.bucket_arn
+
   tags = {
     Project     = "Assal-Kolhapuri-Dryfruits"
     Environment = "dev"
@@ -131,4 +133,11 @@ module "github_oidc" {
     Environment = "dev"
     ManagedBy   = "Terraform"
   }
+}
+
+module "s3" {
+  source = "../../modules/s3"
+
+  project_name = var.project_name
+  environment  = var.environment
 }

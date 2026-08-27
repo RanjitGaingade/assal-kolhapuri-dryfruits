@@ -91,3 +91,11 @@ output "rds_security_group_id" {
   description = "RDS security group ID"
   value       = module.rds.rds_security_group_id
 }
+
+output "product_images_bucket_name" {
+  value = module.s3.bucket_name
+}
+
+output "product_images_bucket_arn" {
+  value = module.s3.bucket_arn
+}

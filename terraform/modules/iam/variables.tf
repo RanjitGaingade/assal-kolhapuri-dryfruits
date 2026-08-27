@@ -13,3 +13,7 @@ variable "rds_secret_arn" {
   description = "ARN of the RDS-managed Secrets Manager secret"
   type        = string
 }
+
+variable "product_images_bucket_arn" {
+  type = string
+}

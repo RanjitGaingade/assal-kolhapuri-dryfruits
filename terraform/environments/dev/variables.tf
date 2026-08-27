@@ -57,3 +57,9 @@ variable "database_username" {
   type        = string
   default     = "postgres"
 }
+
+variable "environment" {
+  description = "Deployment environment"
+  type        = string
+  default     = "dev"
+}
