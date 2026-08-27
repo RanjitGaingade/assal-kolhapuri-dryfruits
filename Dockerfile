@@ -32,6 +32,7 @@ COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY public ./public
 COPY server.js ./
+COPY certs/global-bundle.pem /app/certs/global-bundle.pem
 
 RUN npx prisma generate
 RUN rm -rf /usr/local/lib/node_modules/npm \
