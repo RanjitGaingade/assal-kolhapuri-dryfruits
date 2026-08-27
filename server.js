@@ -9,9 +9,12 @@ const PORT = process.env.PORT || 3000;
 // Prisma
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+ ssl: {
+    rejectUnauthorized: true,
+    ca: require("fs").readFileSync(
+      require("path").join(__dirname, "certs/global-bundle.pem"),
+      "utf8"
+    )
 });
 const prisma = new PrismaClient({
   adapter
