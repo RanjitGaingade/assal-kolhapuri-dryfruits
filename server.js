@@ -1,4 +1,7 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
+
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 
@@ -6,100 +9,106 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// Prisma
+// ========================================
+// PRISMA / POSTGRESQL
+// ========================================
+
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
- ssl: {
+  ssl: {
     rejectUnauthorized: true,
-    ca: require("fs").readFileSync(
-      require("path").join(__dirname, "certs/global-bundle.pem"),
+    ca: fs.readFileSync(
+      path.join(__dirname, "certs", "global-bundle.pem"),
       "utf8"
-    )
+    ),
+  },
 });
+
 const prisma = new PrismaClient({
-  adapter
+  adapter,
 });
 
-// Middleware
-app.use(express.json());
+// ========================================
+// MIDDLEWARE
+// ========================================
 
-// Serve homepage and static files
+app.use(express.json());
 app.use(express.static("public"));
 
-// Homepage
+// ========================================
+// HOME
+// ========================================
+
 app.get("/", (req, res) => {
   res.sendFile("index.html", {
-    root: "public"
+    root: "public",
   });
 });
 
-// Health check
+// ========================================
+// HEALTH CHECK
+// ========================================
+
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "healthy",
-    service: "assal-api"
+    service: "assal-api",
   });
 });
 
-// API health check
+// ========================================
+// API HEALTH CHECK
+// ========================================
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     application: "Assal Kolhapuri Dryfruits",
-    status: "running"
+    status: "running",
   });
 });
 
-// Get all products
+// ========================================
+// GET ALL PRODUCTS
+// ========================================
+
 app.get("/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
-
     res.json(products);
   } catch (error) {
     console.error("Failed to fetch products:", error);
 
     res.status(500).json({
-      error: "Failed to fetch products"
+      error: "Failed to fetch products",
     });
   }
 });
 
-// Get all products - API
+// ========================================
+// GET ALL PRODUCTS - API
+// ========================================
+
 app.get("/api/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
-
     res.json(products);
   } catch (error) {
     console.error("Failed to fetch products:", error);
 
     res.status(500).json({
-      error: "Failed to fetch products"
+      error: "Failed to fetch products",
     });
   }
 });
 
-// Create a product
+// ========================================
+// CREATE PRODUCT
+// ========================================
+
 app.post("/products", async (req, res) => {
   try {
-    const {
-      name,
-      sku,
-      category,
-      purchasePrice,
-      sellingPrice,
-      stockQuantity
-    } = req.body;
-
     const product = await prisma.product.create({
-      data: {
-        name,
-        sku,
-        category,
-        purchasePrice,
-        sellingPrice,
-        stockQuantity
-      }
+      data: req.body,
     });
 
     res.status(201).json(product);
@@ -107,15 +116,49 @@ app.post("/products", async (req, res) => {
     console.error("Failed to create product:", error);
 
     res.status(500).json({
-      error: "Failed to create product"
+      error: "Failed to create product",
     });
   }
 });
 
-// Start server
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(
-    "Assal Kolhapuri Dryfruits API running on port " + PORT
-  );
-});
+// ========================================
+// START SERVER
+// ========================================
 
+async function startServer() {
+  try {
+    await prisma.$connect();
+
+    console.log("========================================");
+    console.log("Database connection successful");
+    console.log("========================================");
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Assal API listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("========================================");
+    console.error("Database connection failed");
+    console.error("========================================");
+    console.error(error);
+
+    process.exit(1);
+  }
+}
+
+// ========================================
+// GRACEFUL SHUTDOWN
+// ========================================
+
+async function shutdown(signal) {
+  console.log(`${signal} received. Shutting down...`);
+
+  await prisma.$disconnect();
+
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+startServer();
