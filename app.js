@@ -90,7 +90,28 @@ app.get("/api/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
 
-    res.json(products);
+    const formattedProducts = products.map((product) => {
+      let image = product.image;
+
+      if (image) {
+        // Convert Markdown-style S3 URL to a plain URL
+        const match = image.match(/\]\((https?:\/\/[^)]+)\)/);
+
+        if (match) {
+          image = match[1];
+        } else {
+          // Remove brackets if the value is simply [URL]
+          image = image.replace(/^\[|\]$/g, "");
+        }
+      }
+
+      return {
+        ...product,
+        image,
+      };
+    });
+
+    res.json(formattedProducts);
   } catch (error) {
     console.error("Failed to fetch products:", error);
 
@@ -99,6 +120,8 @@ app.get("/api/products", async (req, res) => {
     });
   }
 });
+
+
 
 // ========================================
 // CREATE PRODUCT
