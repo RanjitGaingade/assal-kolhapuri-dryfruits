@@ -2,63 +2,25 @@
 // PRODUCTS
 // ========================================
 
-const products = [
-  {
-    id: 1,
-    name: "Premium Almonds",
-    size: "500g",
-    price: 500,
-    oldPrice: 599,
-    image: "/images/almonds.jpg",
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: "Kaju (Cashews)",
-    size: "500g",
-    price: 500,
-    oldPrice: 799,
-    image: "/images/cashews.jpg",
-    rating: 4.9
-  },
-  {
-    id: 3,
-    name: "Pistachios",
-    size: "250g",
-    price: 410,
-    oldPrice: 499,
-    image: "/images/pistachios.jpg",
-    rating: 4.7
-  },
-  {
-    id: 4,
-    name: "Raisins (Kishmish)",
-    size: "500g",
-    price: 300,
-    oldPrice: 349,
-    image: "/images/raisins.jpg",
-    rating: 4.8
-  },
-  {
-    id: 5,
-    name: "Dates",
-    size: "500g",
-    price: 240,
-    oldPrice: 300,
-    image: "/images/dates.jpg",
-    rating: 4.8
-  },
-  {
-    id: 6,
-    name: "Walnuts",
-    size: "100g",
-    price: 200,
-    oldPrice: 249,
-    image: "/images/walnuts.jpg",
-    rating: 4.8
-  }
-];
+let products = [];
 
+async function loadProducts() {
+  try {
+    const response = await fetch("/api/products");
+
+    if (!response.ok) {
+      throw new Error(`Products API failed: ${response.status}`);
+    }
+
+    products = await response.json();
+
+    console.log("Products loaded from API:", products);
+
+    renderProducts();
+  } catch (error) {
+    console.error("Failed to load products:", error);
+  }
+}
 
 // ========================================
 // CART
@@ -698,8 +660,6 @@ function placeOrder() {
 // INITIALIZE
 // ========================================
 
-renderProducts();
-
+loadProducts();
 updateCartCount();
-
 renderCart();
