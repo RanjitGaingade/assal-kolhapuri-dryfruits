@@ -1,4 +1,5 @@
-name: Build and Push API to ECR
+
+name: Build, Scan, Push and Deploy API
 
 on:
   push:
@@ -19,9 +20,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # =========================================================
+      # 1. CHECKOUT SOURCE
+      # =========================================================
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # =========================================================
+      # 2. SETUP NODE.JS
+      # =========================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # =========================================================
+      # 3. INSTALL DEPENDENCIES
+      # =========================================================
+      - name: Install dependencies
+        run: npm ci
+
+      # =========================================================
+      # 4. CODE QUALITY - ESLINT
+      # =========================================================
+      - name: Lint
+        run: npm run lint
+
+      # =========================================================
+      # 5. AUTOMATED TESTS
+      # =========================================================
+      - name: Test
+        run: npm test
+
+      # =========================================================
+      # 6. PRISMA SCHEMA VALIDATION
+      # =========================================================
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      # =========================================================
+      # 7. CONFIGURE AWS USING OIDC
+      # =========================================================
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -31,10 +72,16 @@ jobs:
           retry-max-attempts: 1
           mask-aws-account-id: false
 
+      # =========================================================
+      # 8. LOGIN TO AMAZON ECR
+      # =========================================================
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # =========================================================
+      # 9. BUILD DOCKER IMAGE
+      # =========================================================
       - name: Build Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -42,6 +89,7 @@ jobs:
           set -e
 
           echo "Building Docker image..."
+
           docker build \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA" \
             .
@@ -49,6 +97,22 @@ jobs:
           echo "Image built successfully:"
           docker images "$ECR_REGISTRY/$ECR_REPOSITORY"
 
+      # =========================================================
+      # 10. SECURITY SCAN - TRIVY
+      # =========================================================
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      # =========================================================
+      # 11. PUSH DOCKER IMAGE TO ECR
+      # =========================================================
       - name: Push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -62,6 +126,9 @@ jobs:
 
           echo "Docker image pushed successfully."
 
+      # =========================================================
+      # 12. DEPLOY TO EC2 VIA AWS SSM
+      # =========================================================
       - name: Deploy to EC2 via SSM
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
@@ -73,6 +140,7 @@ jobs:
           RDS_ENDPOINT: assal-kolhapuri-postgres.c3cgkeymu7my.ap-south-1.rds.amazonaws.com
           RDS_DATABASE: assalkolhapuri
           RDS_USERNAME: postgres
+
         run: |
           set -e
 
@@ -80,6 +148,7 @@ jobs:
 
           cat > /tmp/deploy.sh <<'SCRIPT'
           #!/bin/bash
+
           set -e
 
           echo "========================================"
@@ -89,8 +158,8 @@ jobs:
           echo "AWS Region: ${AWS_REGION}"
           echo "ECR Repository: ${ECR_REPOSITORY}"
           echo "Image Tag: ${IMAGE_TAG}"
-
           echo ""
+
           echo "1. Logging in to ECR..."
 
           aws ecr get-login-password \
@@ -100,21 +169,23 @@ jobs:
               --password-stdin "${ECR_REGISTRY}"
 
           echo "ECR login successful."
-
           echo ""
+
           echo "2. Pulling Docker image..."
 
-          docker pull "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker pull \
+            "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
           echo "Docker image pulled successfully."
-
           echo ""
+
           echo "3. Stopping existing container..."
 
           docker stop assal-kolhapuri-api || true
           docker rm assal-kolhapuri-api || true
 
           echo ""
+
           echo "4. Retrieving database password from Secrets Manager..."
 
           DB_PASSWORD=$(
@@ -136,6 +207,7 @@ jobs:
           DATABASE_URL="postgresql://${RDS_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}:5432/${RDS_DATABASE}"
 
           echo ""
+
           echo "5. Starting new Docker container..."
 
           docker run -d \
@@ -148,22 +220,26 @@ jobs:
             "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
           echo ""
+
           echo "6. Waiting for application to start..."
 
           sleep 10
 
           echo ""
+
           echo "7. Docker container status..."
 
           docker ps \
             --filter "name=assal-kolhapuri-api"
 
           echo ""
+
           echo "8. Docker container logs..."
 
           docker logs --tail 100 assal-kolhapuri-api
 
           echo ""
+
           echo "9. Health check..."
 
           curl -fsS \
@@ -171,9 +247,11 @@ jobs:
             http://localhost:3000/health
 
           echo ""
+
           echo "========================================"
           echo "Deployment completed successfully."
           echo "========================================"
+
           SCRIPT
 
           echo "Encoding deployment script..."
@@ -206,6 +284,7 @@ jobs:
           set -e
 
           echo ""
+
           echo "========================================"
           echo "SSM command result"
           echo "========================================"
@@ -218,8 +297,8 @@ jobs:
             --output text)
 
           echo "Status: ${STATUS}"
-
           echo ""
+
           echo "SSM output/error:"
 
           aws ssm get-command-invocation \
