@@ -1,8 +1,10 @@
 # =========================
 # Production dependencies
 # =========================
-
 FROM node:22-alpine AS dependencies
+
+# Patch Alpine OS packages
+RUN apk update && apk upgrade
 
 RUN npm install -g npm@11.19.0
 
@@ -12,12 +14,13 @@ COPY package*.json ./
 
 RUN npm ci
 
-
 # =========================
 # Production
 # =========================
-
 FROM node:22-alpine AS production
+
+# Patch Alpine OS packages
+RUN apk update && apk upgrade
 
 WORKDIR /app
 
