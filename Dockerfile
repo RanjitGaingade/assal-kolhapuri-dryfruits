@@ -55,7 +55,7 @@ COPY --from=dependencies /app/node_modules/@prisma/client ./node_modules/@prisma
 # Prisma CLI is needed for migrations at container startup
 COPY --from=dependencies /app/node_modules/prisma ./node_modules/prisma
 
-COPY package*.json ./
+COPY package.json ./
 
 COPY prisma ./prisma
 
