@@ -95,6 +95,27 @@ jobs:
           echo "Image built successfully:"
           docker images "$ECR_REGISTRY/$ECR_REPOSITORY"
 
+      - name: Inspect production image dependencies
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker run --rm \
+            "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA" \
+            npm ls prisma @prisma/client pacote tar ip-address sigstore brace-expansion picomatch || true
+
+          echo "Searching filesystem for vulnerable packages..."
+
+          docker run --rm \
+            "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA" \
+            sh -c 'find /app/node_modules -type d \( \
+              -name "tar" -o \
+              -name "pacote" -o \
+              -name "ip-address" -o \
+              -name "sigstore" -o \
+              -name "brace-expansion" -o \
+              -name "picomatch" \
+            \) -print'
+
       # =========================================================
       # 10. SECURITY SCAN - TRIVY
       # =========================================================
