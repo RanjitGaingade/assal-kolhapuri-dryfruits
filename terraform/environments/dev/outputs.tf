@@ -99,3 +99,18 @@ output "product_images_bucket_name" {
 output "product_images_bucket_arn" {
   value = module.s3.bucket_arn
 }
+
+output "target_group_arn" {
+  description = "ARN of the ALB target group"
+  value       = module.alb.target_group_arn
+}
+
+output "alb_dns_name" {
+  description = "DNS name of the Application Load Balancer"
+  value       = module.alb.alb_dns_name
+}
+
+output "route53_name_servers" {
+  description = "Route 53 name servers for the application domain"
+  value       = module.route53.name_servers
+}

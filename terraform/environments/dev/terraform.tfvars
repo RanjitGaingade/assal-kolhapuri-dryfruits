@@ -16,3 +16,7 @@ private_subnet_cidrs = [
 instance_type = "t3.micro"
 
 ssh_cidr = "223.191.88.243/32"
+
+domain_name = "assalkolhapuri.com"
+
+ami_id = "ami-0ac7b260cf76d8865"

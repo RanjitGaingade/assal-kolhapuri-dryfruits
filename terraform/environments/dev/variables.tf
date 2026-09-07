@@ -63,3 +63,13 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "domain_name" {
+  description = "Domain name for the application"
+  type        = string
+}
+
+variable "ami_id" {
+  description = "Pinned Amazon Linux 2023 AMI ID for the EC2 instance"
+  type        = string
+}

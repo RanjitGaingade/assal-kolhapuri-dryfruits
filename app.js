@@ -94,13 +94,13 @@ app.get("/api/products", async (req, res) => {
       let image = product.image;
 
       if (image) {
-        // Convert Markdown-style S3 URL to a plain URL
-        const match = image.match(/\]\((https?:\/\/[^)]+)\)/);
+        // Convert Markdown-style [URL](URL) to plain URL
+        const markdownMatch = image.match(/^\[(.+)\]\((.+)\)$/);
 
-        if (match) {
-          image = match[1];
+        if (markdownMatch) {
+          image = markdownMatch[2];
         } else {
-          // Remove brackets if the value is simply [URL]
+          // Remove simple surrounding brackets: [URL]
           image = image.replace(/^\[|\]$/g, "");
         }
       }
@@ -114,10 +114,7 @@ app.get("/api/products", async (req, res) => {
     res.json(formattedProducts);
   } catch (error) {
     console.error("Failed to fetch products:", error);
-
-    res.status(500).json({
-      error: "Failed to fetch products",
-    });
+    res.status(500).json({ error: "Failed to fetch products" });
   }
 });
 

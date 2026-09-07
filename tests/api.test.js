@@ -14,8 +14,7 @@ jest.mock("@prisma/adapter-pg", () => ({
   PrismaPg: jest.fn(() => ({}))
 }));
 
-const { app } = require("../app");
-
+const app = require("../app");
 describe("API Endpoints", () => {
 
   beforeEach(() => {

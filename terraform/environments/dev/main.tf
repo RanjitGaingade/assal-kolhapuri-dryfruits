@@ -14,11 +14,6 @@ provider "aws" {
   region = var.aws_region
 
 }
-data "aws_ssm_parameter" "amazon_linux_2023" {
-  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-
-
-}
 
 module "vpc" {
   source = "../../modules/vpc"
@@ -66,7 +61,7 @@ module "ec2" {
   source = "../../modules/ec2"
 
   name                  = var.project_name
-  ami_id                = data.aws_ssm_parameter.amazon_linux_2023.value
+  ami_id                = var.ami_id
   instance_type         = var.instance_type
   subnet_id             = module.vpc.public_subnet_ids[0]
   instance_profile_name = module.iam.instance_profile_name
@@ -140,4 +135,40 @@ module "s3" {
 
   project_name = var.project_name
   environment  = var.environment
+}
+
+module "route53" {
+  source = "../../modules/route53"
+
+  domain_name  = var.domain_name
+  alb_dns_name = module.alb.alb_dns_name
+  alb_zone_id  = module.alb.alb_zone_id
+}
+
+module "alb" {
+  source = "../../modules/alb"
+
+  name = var.project_name
+
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
+
+  target_instance_id = module.ec2.instance_id
+
+  tags = {
+    Project     = "Assal-Kolhapuri-Dryfruits"
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "ec2_from_alb" {
+  security_group_id            = module.security_group.security_group_id
+  referenced_security_group_id = module.alb.alb_security_group_id
+
+  from_port   = 3000
+  to_port     = 3000
+  ip_protocol = "tcp"
+
+  description = "Allow application traffic from ALB"
 }

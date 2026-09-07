@@ -114,41 +114,6 @@ app.get("/api/health", (req, res) => {
 // GET ALL PRODUCTS
 // ========================================
 
-app.get("/products", async (req, res) => {
-  try {
-    const products = await prisma.product.findMany();
-
-    const productsWithImageUrls = await Promise.all(
-      products.map(async (product) => {
-        if (!product.image || !S3_BUCKET) {
-          return product;
-        }
-
-        const command = new GetObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: product.image,
-        });
-
-        const imageUrl = await getSignedUrl(s3, command, {
-          expiresIn: 3600,
-        });
-
-        return {
-          ...product,
-          image: imageUrl,
-        };
-      }),
-    );
-
-    res.json(productsWithImageUrls);
-  } catch (error) {
-    console.error("Failed to fetch products:", error);
-
-    res.status(500).json({
-      error: "Failed to fetch products",
-    });
-  }
-});
 
 // ========================================
 // GET ALL PRODUCTS - API
@@ -158,27 +123,13 @@ app.get("/api/products", async (req, res) => {
   try {
     const products = await prisma.product.findMany();
 
-    const productsWithImageUrls = await Promise.all(
-      products.map(async (product) => {
-        if (!product.image || !S3_BUCKET) {
-          return product;
-        }
-
-        const command = new GetObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: product.image,
-        });
-
-        const imageUrl = await getSignedUrl(s3, command, {
-          expiresIn: 3600,
-        });
-
-        return {
-          ...product,
-          image: imageUrl,
-        };
-      }),
-    );
+    const productsWithImageUrls = products.map((product) => ({
+      ...product,
+      image:
+        product.image && S3_BUCKET
+          ? `/api/products/${product.id}/image`
+          : product.image,
+    }));
 
     res.json(productsWithImageUrls);
   } catch (error) {
@@ -191,8 +142,37 @@ app.get("/api/products", async (req, res) => {
 });
 
 // ========================================
-// CREATE PRODUCT
+// PRODUCT IMAGE
 // ========================================
+
+
+app.get("/api/products/:id/image", async (req, res) => {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: Number(req.params.id) },
+      select: { image: true },
+    });
+
+    if (!product || !product.image || !S3_BUCKET) {
+      return res.status(404).send("Image not found");
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: product.image,
+    });
+
+    const imageUrl = await getSignedUrl(s3, command, {
+      expiresIn: 3600,
+    });
+
+    res.redirect(imageUrl);
+  } catch (error) {
+    console.error("Failed to serve product image:", error);
+    res.status(500).send("Failed to load image");
+  }
+});
+
 
 app.post("/products", upload.single("image"), async (req, res) => {
   let s3Key = null;
@@ -265,18 +245,9 @@ app.post("/products", upload.single("image"), async (req, res) => {
     let responseProduct = product;
 
     if (product.image && S3_BUCKET) {
-      const command = new GetObjectCommand({
-        Bucket: S3_BUCKET,
-        Key: product.image,
-      });
-
-      const imageUrl = await getSignedUrl(s3, command, {
-        expiresIn: 3600,
-      });
-
       responseProduct = {
         ...product,
-        image: imageUrl,
+        image: `/api/products/${product.id}/image`,
       };
     }
 
