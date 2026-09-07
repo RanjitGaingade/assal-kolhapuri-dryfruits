@@ -67,6 +67,12 @@ COPY server.js ./
 
 COPY certs/global-bundle.pem /app/certs/global-bundle.pem
 
+# Remove npm and npx from the runtime image.
+# npm is only required during the build stages.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx
+
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]
