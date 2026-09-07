@@ -100,16 +100,17 @@ jobs:
       # =========================================================
       # 10. SECURITY SCAN - TRIVY
       # =========================================================
-      - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          format: table
-          exit-code: 1
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
-
+     - name: Scan Docker image with Trivy
+       uses: aquasecurity/trivy-action@v0.36.0
+  with:
+    image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+    format: table
+    exit-code: 1
+    ignore-unfixed: true
+    vuln-type: os,library
+    severity: CRITICAL,HIGH
+    scanners: vuln
+    hide-progress: true
       # =========================================================
       # 11. PUSH DOCKER IMAGE TO ECR
       # =========================================================
