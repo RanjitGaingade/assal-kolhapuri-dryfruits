@@ -6,7 +6,7 @@ This project takes a REST API from source code to a fully automated, secured, an
 
 ## Architecture
 
-![AWS Architecture Diagram](docs/architecture-diagram.png)
+![AWS Architecture Diagram](docs/Architecture-diagram.png)
 
 The application runs on AWS EC2 behind an Application Load Balancer, with a PostgreSQL database on RDS and Docker containers. The ALB handles routing and traffic distribution directly to the containerized application. Infrastructure is provisioned with Terraform, and deployments are automated end-to-end through GitHub Actions using OIDC-based secure authentication (no long-lived AWS credentials).
 
