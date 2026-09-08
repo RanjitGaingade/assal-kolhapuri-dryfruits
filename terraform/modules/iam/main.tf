@@ -86,7 +86,7 @@ data "aws_iam_policy_document" "ec2_s3_product_images" {
     ]
 
     resources = [
-      "${var.product_images_bucket_arn}/products/*"
+      "${var.product_images_bucket_arn}/*"
     ]
   }
 }

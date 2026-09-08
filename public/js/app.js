@@ -65,17 +65,12 @@ function renderProducts() {
           <h3>${product.name}</h3>
 
           <div class="product-size">
-            ${product.size}
-          </div>
+           ${product.category}
+         </div>
 
           <div class="product-price">
 
-            ₹${product.price}
-
-            <span class="old-price">
-              ₹${product.oldPrice}
-            </span>
-
+           ₹${Number(product.sellingPrice).toFixed(0)}
           </div>
 
           <div class="product-rating">
@@ -144,12 +139,10 @@ function addToCart(productId) {
 
       name: product.name,
 
-      price: Number(product.price),
-
+      price: Number(product.sellingPrice),
       image: product.image,
 
-      size: product.size,
-
+      size: product.category,
       quantity: 1
 
     });
