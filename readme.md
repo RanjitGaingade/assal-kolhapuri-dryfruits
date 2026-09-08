@@ -15,7 +15,7 @@ The application runs on AWS EC2 behind an Application Load Balancer, with a Post
 **Application:** Node.js, Express.js, PostgreSQL, Prisma
 **Infrastructure:** AWS (EC2, VPC, RDS, ALB, Route 53, IAM, ECR, S3, Secrets Manager, CloudWatch, Systems Manager), Terraform
 **Containers:** Docker
-**CI/CD:** GitHub Actions, GitHub OIDC, Docker Hub / ECR
+**CI/CD:** GitHub Actions, GitHub OIDC, Amazon ECR
 **Security & Quality:** Trivy (vulnerability scanning), npm audit, ESLint
 **Testing:** Jest, Supertest
 **Monitoring:** AWS CloudWatch
@@ -25,6 +25,7 @@ The application runs on AWS EC2 behind an Application Load Balancer, with a Post
 - **Infrastructure as Code** — All AWS resources (VPC, subnets, EC2, RDS, IAM roles, security groups, ECR, S3) provisioned via reusable, version-controlled Terraform modules.
 - **Secure CI/CD Pipeline** — GitHub Actions pipeline covering code validation, automated testing, Docker image builds, Trivy vulnerability scanning, image publishing, and automated EC2 deployment.
 - **Zero long-lived AWS credentials** — GitHub authenticates to AWS via OIDC federation instead of stored access keys.
+- **Zero SSH exposure** — deployments are pushed to EC2 using AWS Systems Manager (SSM), with no open SSH ports or long-lived key pairs required.
 - **Git SHA-based image tagging** — every deployed container image is traceable back to the exact source commit.
 - **Dependency vulnerability remediation** — identified and resolved a transitive `deepmerge-ts` vulnerability in the Prisma dependency tree using npm overrides, validated with `npm audit`.
 - **Health checks & deployment verification** — automated PostgreSQL health checks and post-deployment verification steps built into the pipeline.
@@ -32,14 +33,65 @@ The application runs on AWS EC2 behind an Application Load Balancer, with a Post
 - **Observability** — CPU, memory, API request rates, latency, and container health, with AWS CloudWatch monitoring.
 
 ## CI/CD Pipeline Overview
+
 ![CI/CD Pipeline Diagram](docs/cicd-pipeline.png)
 
-1. Code pushed to GitHub triggers the GitHub Actions workflow.
-2. Code validation, linting (ESLint), and automated tests (Jest, Supertest) run first.
-3. A Docker image is built and scanned for HIGH/CRITICAL vulnerabilities using Trivy — the pipeline fails on unresolved critical issues.
-4. The image is tagged with the Git commit SHA and pushed to the registry.
-5. GitHub authenticates to AWS via OIDC and deploys the new image to EC2 over SSH.
-6. Running containers are verified post-deployment to confirm a healthy release.
+The pipeline runs automatically on every push, executing the following stages in order:
+
+1. **Checkout source** — pulls the latest commit from GitHub.
+2. **Setup Node.js** — configures the Node.js runtime for the build.
+3. **Install dependencies** (`npm ci`) — clean, reproducible dependency install from `package-lock.json`.
+4. **Lint** (ESLint) — static code quality and style validation.
+5. **Test** (Jest + Supertest) — runs the full automated test suite.
+6. **Validate Prisma schema** — verifies the database schema (`prisma/schema.prisma`) is valid before proceeding.
+7. **Configure AWS credentials** — authenticates to AWS via GitHub OIDC (`aws-actions/configure-aws-credentials`), assuming a short-lived IAM role — no static AWS keys stored in GitHub.
+8. **Login to Amazon ECR** — authenticates Docker to the private ECR registry.
+9. **Build Docker image** — builds the production image and tags it with the Git commit SHA.
+10. **Inspect production image dependencies** — reviews the final image's dependency tree before scanning.
+11. **Scan Docker image with Trivy** — scans the built image for vulnerabilities; the pipeline fails on unresolved HIGH/CRITICAL findings.
+12. **Push Docker image** — pushes the scanned, tagged image to Amazon ECR.
+13. **Deploy to EC2 via SSM** — sends the deployment command to the target EC2 instance through AWS Systems Manager (no SSH access required), which pulls the new image and recreates the running container.
+14. **Deployment verification** — confirms the container started successfully and the application is healthy.
+
+### Pipeline environment (per run)
+Each deployment run resolves environment-specific values dynamically, including:
+- AWS region and ECR repository
+- The Git SHA-based image tag
+- Target EC2 instance ID
+- RDS endpoint, database name, and Secrets Manager ARN for credentials
+
+No credentials or secrets are hardcoded — they're injected at runtime via GitHub Actions secrets and AWS Secrets Manager.
+
+### Pipeline Execution (Live Run)
+
+**Install dependencies** (`npm ci`)
+![Install dependencies](docs/pipeline-install-dependencies.png)
+
+**Configure AWS credentials (OIDC) & Login to Amazon ECR**
+![Configure AWS credentials and ECR login](docs/pipeline-configure-aws-ecr.png)
+
+**Build Docker image**
+![Build Docker image](docs/pipeline-build-docker-image.png)
+
+**Scan Docker image with Trivy**
+![Trivy security scan](docs/pipeline-trivy-scan.png)
+
+**Push Docker image to Amazon ECR**
+![Push Docker image](docs/pipeline-push-docker-image.png)
+
+**Deploy to EC2 via AWS SSM**
+![Deploy to EC2 via SSM](docs/pipeline-deploy-ec2-ssm.png)
+
+## Frontend Preview
+
+**Homepage**
+![Homepage](docs/homepage.png)
+
+**Products**
+![Products](docs/products.png)
+
+**Cart & Checkout**
+![Checkout](docs/checkout.png)
 
 ## Project Structure
 
@@ -54,37 +106,6 @@ The application runs on AWS EC2 behind an Application Load Balancer, with a Post
 ├── .dockerignore
 ├── .gitignore
 └── README.md
-```
-
-## Local Development
-
-```bash
-# Clone the repository
-git clone https://github.com/RanjitGaingade/assal-kolhapuri-dryfruits.git
-cd assal-kolhapuri-dryfruits
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env
-
-# Run database migrations
-npx prisma migrate dev
-
-# Start the application
-npm run dev
-```
-
-## Deployment
-
-Deployment is fully automated via GitHub Actions on every push to the default branch. Infrastructure changes are managed separately through Terraform:
-
-```bash
-cd terraform
-terraform init
-terraform plan
-terraform apply
 ```
 
 ## Author
