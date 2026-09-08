@@ -77,9 +77,6 @@ function renderProducts() {
 
             ★★★★★
 
-            <span>
-              ${product.rating}
-            </span>
 
           </div>
 
