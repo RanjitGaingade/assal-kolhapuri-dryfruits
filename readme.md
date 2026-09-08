@@ -32,6 +32,7 @@ The application runs on AWS EC2 behind an Application Load Balancer, with a Post
 - **Observability** — CPU, memory, API request rates, latency, and container health, with AWS CloudWatch monitoring.
 
 ## CI/CD Pipeline Overview
+![CI/CD Pipeline Diagram](docs/cicd-pipeline.png)
 
 1. Code pushed to GitHub triggers the GitHub Actions workflow.
 2. Code validation, linting (ESLint), and automated tests (Jest, Supertest) run first.
