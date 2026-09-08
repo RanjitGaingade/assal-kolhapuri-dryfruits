@@ -85,13 +85,13 @@ No credentials or secrets are hardcoded — they're injected at runtime via GitH
 ## Frontend Preview
 
 **Homepage**
-![Homepage](docs/homepage.png)
+![Homepage](docs/Homepage.png)
 
 **Products**
-![Products](docs/products.png)
+![Products](docs/Products.png)
 
 **Cart & Checkout**
-![Checkout](docs/checkout.png)
+![Checkout](docs/Checkout.png)
 
 ## Project Structure
 
