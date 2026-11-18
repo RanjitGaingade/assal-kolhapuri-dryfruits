@@ -7,14 +7,47 @@ datasource db {
 }
 
 model Product {
-  id            Int      @id @default(autoincrement())
+  id            Int         @id @default(autoincrement())
   name          String
-  sku           String   @unique
+  sku           String      @unique
   category      String
   purchasePrice Decimal
   sellingPrice  Decimal
-  stockQuantity Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  stockQuantity Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   image         String?
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  orderNumber  String      @unique
+  customerName String
+  mobile       String
+  address      String
+  city         String
+  pincode      String
+  subtotal     Decimal     @db.Decimal(12, 2)
+  delivery     Decimal     @db.Decimal(12, 2)
+  total        Decimal     @db.Decimal(12, 2)
+  status       String      @default("PENDING")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        OrderItem[]
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  productName String
+  unitPrice   Decimal @db.Decimal(12, 2)
+  quantity    Int
+  lineTotal   Decimal @db.Decimal(12, 2)
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
 }

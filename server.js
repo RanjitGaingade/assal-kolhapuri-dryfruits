@@ -280,6 +280,219 @@ app.post("/products", upload.single("image"), async (req, res) => {
   }
 });
 
+
+// ========================================
+// CREATE CUSTOMER ORDER
+// ========================================
+
+app.post("/api/orders", async (req, res) => {
+  try {
+    const customerName = String(req.body.customerName || "").trim();
+    const mobile = String(req.body.mobile || "").trim();
+    const address = String(req.body.address || "").trim();
+    const city = String(req.body.city || "").trim();
+    const pincode = String(req.body.pincode || "").trim();
+    const submittedItems = req.body.items;
+
+    if (!customerName || !mobile || !address || !city || !pincode) {
+      return res.status(400).json({
+        error: "Please provide all required customer details.",
+      });
+    }
+
+    if (!/^[0-9]{10}$/.test(mobile)) {
+      return res.status(400).json({
+        error: "Please enter a valid 10-digit mobile number.",
+      });
+    }
+
+    if (!/^[0-9]{6}$/.test(pincode)) {
+      return res.status(400).json({
+        error: "Please enter a valid 6-digit pincode.",
+      });
+    }
+
+    if (
+      !Array.isArray(submittedItems) ||
+      submittedItems.length === 0 ||
+      submittedItems.length > 50
+    ) {
+      return res.status(400).json({
+        error: "Your cart is empty or contains too many items.",
+      });
+    }
+
+    // Combine duplicate product IDs and validate quantities.
+    const quantities = new Map();
+
+    for (const item of submittedItems) {
+      const productId = Number(item.id);
+      const quantity = Number(item.quantity);
+
+      if (
+        !Number.isSafeInteger(productId) ||
+        productId <= 0 ||
+        !Number.isSafeInteger(quantity) ||
+        quantity <= 0 ||
+        quantity > 100
+      ) {
+        return res.status(400).json({
+          error: "The cart contains an invalid product or quantity.",
+        });
+      }
+
+      const combinedQuantity = (quantities.get(productId) || 0) + quantity;
+
+      if (combinedQuantity > 100) {
+        return res.status(400).json({
+          error: "The requested quantity is too high.",
+        });
+      }
+
+      quantities.set(productId, combinedQuantity);
+    }
+
+    const order = await prisma.$transaction(
+      async (tx) => {
+        const productIds = Array.from(quantities.keys());
+
+        const products = await tx.product.findMany({
+          where: { id: { in: productIds } },
+        });
+
+        if (products.length !== productIds.length) {
+          throw new Error("ORDER_PRODUCT_NOT_FOUND");
+        }
+
+        let subtotalPaise = 0;
+        const orderItems = [];
+
+        for (const product of products) {
+          const quantity = quantities.get(product.id);
+          const unitPricePaise = Math.round(
+            Number(product.sellingPrice) * 100
+          );
+
+          if (
+            !Number.isSafeInteger(unitPricePaise) ||
+            unitPricePaise < 0
+          ) {
+            throw new Error("ORDER_INVALID_PRODUCT_PRICE");
+          }
+
+          if (product.stockQuantity < quantity) {
+            throw new Error("ORDER_OUT_OF_STOCK");
+          }
+
+          const lineTotalPaise = unitPricePaise * quantity;
+          subtotalPaise += lineTotalPaise;
+
+          orderItems.push({
+            productId: product.id,
+            productName: product.name,
+            unitPrice: (unitPricePaise / 100).toFixed(2),
+            quantity,
+            lineTotal: (lineTotalPaise / 100).toFixed(2),
+          });
+        }
+
+        if (!Number.isSafeInteger(subtotalPaise)) {
+          throw new Error("ORDER_INVALID_TOTAL");
+        }
+
+        const deliveryPaise = subtotalPaise >= 99900 ? 0 : 5000;
+        const totalPaise = subtotalPaise + deliveryPaise;
+
+        // Reduce stock inside the transaction. Any failure rolls back
+        // all stock changes and prevents the order from being saved.
+        for (const item of orderItems) {
+          const stockUpdate = await tx.product.updateMany({
+            where: {
+              id: item.productId,
+              stockQuantity: { gte: item.quantity },
+            },
+            data: {
+              stockQuantity: { decrement: item.quantity },
+            },
+          });
+
+          if (stockUpdate.count !== 1) {
+            throw new Error("ORDER_OUT_OF_STOCK");
+          }
+        }
+
+        const orderNumber =
+          "AKD-" +
+          Date.now() +
+          "-" +
+          crypto.randomBytes(3).toString("hex").toUpperCase();
+
+        return await tx.order.create({
+          data: {
+            orderNumber,
+            customerName,
+            mobile,
+            address,
+            city,
+            pincode,
+            subtotal: (subtotalPaise / 100).toFixed(2),
+            delivery: (deliveryPaise / 100).toFixed(2),
+            total: (totalPaise / 100).toFixed(2),
+            status: "PENDING",
+            items: {
+              create: orderItems,
+            },
+          },
+          include: {
+            items: true,
+          },
+        });
+      },
+      {
+        isolationLevel: "Serializable",
+      }
+    );
+
+    return res.status(201).json({
+      message: "Order placed successfully.",
+      order,
+    });
+  } catch (error) {
+    if (error.message === "ORDER_PRODUCT_NOT_FOUND") {
+      return res.status(400).json({
+        error: "One or more products in your cart are no longer available.",
+      });
+    }
+
+    if (error.message === "ORDER_OUT_OF_STOCK") {
+      return res.status(409).json({
+        error: "One or more products do not have enough stock. Please update your cart.",
+      });
+    }
+
+    if (
+      error.message === "ORDER_INVALID_PRODUCT_PRICE" ||
+      error.message === "ORDER_INVALID_TOTAL"
+    ) {
+      return res.status(400).json({
+        error: "A product price is invalid. Please contact us.",
+      });
+    }
+
+    if (error.code === "P2034") {
+      return res.status(409).json({
+        error: "Stock changed while placing your order. Please try again.",
+      });
+    }
+
+    console.error("Failed to create order:", error);
+
+    return res.status(500).json({
+      error: "Unable to place your order right now. Please try again.",
+    });
+  }
+});
+
 // ========================================
 // START SERVER
 // ========================================
