@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assal Kolhapuri Dryfruits | Admin</title>
+<style>
+:root {
+  --green: #176b42;
+  --green-dark: #104d30;
+  --gold: #d5a443;
+  --bg: #f5f6f2;
+  --white: #fff;
+  --text: #242b25;
+  --muted: #69746c;
+  --border: #e4e9e3;
+  --red: #b42318;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.hidden { display: none !important; }
+
+.login-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.login-card {
+  background: white;
+  width: 100%;
+  max-width: 410px;
+  padding: 36px;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px #182d1c12;
+}
+.brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+  font-size: 27px;
+  font-weight: 800;
+}
+.brand h1 { font-size: 21px; margin: 14px 0 5px; }
+.brand p { color: var(--muted); font-size: 13px; margin: 0; }
+.field { margin: 18px 0; }
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 7px;
+}
+.field input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  outline: none;
+}
+.field input:focus { border-color: var(--green); }
+.primary {
+  background: var(--green);
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 17px;
+  font-weight: 650;
+}
+.primary:hover { background: var(--green-dark); }
+.login-button { width: 100%; margin-top: 8px; }
+.error { color: var(--red); font-size: 13px; margin-top: 12px; }
+.muted { color: var(--muted); }
+
+#dashboard { min-height: 100vh; }
+.topbar {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 15px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.topbar h1 { margin: 0; font-size: 19px; }
+.topbar small { color: var(--muted); }
+.logout {
+  border: 1px solid var(--border);
+  background: white;
+  padding: 9px 14px;
+  border-radius: 8px;
+}
+.layout {
+  max-width: 1250px;
+  margin: auto;
+  padding: 26px;
+}
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.tab {
+  background: white;
+  border: 1px solid var(--border);
+  padding: 10px 17px;
+  border-radius: 8px;
+  color: var(--text);
+}
+.tab.active {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.stat, .panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.stat { padding: 19px; }
+.stat span { color: var(--muted); font-size: 13px; }
+.stat strong { display: block; font-size: 25px; margin-top: 8px; }
+.panel { padding: 20px; }
+.panel h2 { font-size: 17px; margin: 0 0 17px; }
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+.panel-head h2 { margin: 0; }
+.refresh {
+  border: 1px solid var(--border);
+  background: white;
+  padding: 8px 12px;
+  border-radius: 7px;
+}
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; }
+th, td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  vertical-align: top;
+}
+th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  background: #fafbf9;
+}
+td select, td input {
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-width: 150px;
+}
+.small-button {
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--green);
+  color: white;
+  font-size: 12px;
+}
+.message {
+  padding: 12px;
+  margin: 12px 0;
+  border-radius: 8px;
+  background: #edf5ef;
+  color: var(--green-dark);
+  font-size: 13px;
+}
+.empty { padding: 30px; text-align: center; color: var(--muted); }
+.loading { color: var(--muted); padding: 20px 0; }
+@media (max-width: 760px) {
+  .layout { padding: 15px; }
+  .topbar { padding: 13px 15px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stat { padding: 14px; }
+  .stat strong { font-size: 21px; }
+  .login-card { padding: 25px; }
+}
+</style>
+</head>
+<body>
+
+<section id="loginScreen" class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <h1>Assal Kolhapuri Dryfruits</h1>
+      <p>Private Administration Portal</p>
+    </div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">Admin username</label>
+        <input id="username" name="username" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password"
+          autocomplete="current-password" required>
+      </div>
+      <button class="primary login-button" type="submit">Sign in</button>
+      <div id="loginError" class="error" role="alert"></div>
+    </form>
+    <p class="muted" style="font-size:12px;text-align:center;margin-top:24px">
+      Private access through AWS Systems Manager
+    </p>
+  </div>
+</section>
+
+<section id="dashboard" class="hidden">
+  <header class="topbar">
+    <div>
+      <h1>Assal Kolhapuri Dryfruits</h1>
+      <small>Admin Dashboard</small>
+    </div>
+    <button id="logoutButton" class="logout">Sign out</button>
+  </header>
+
+  <main class="layout">
+    <nav class="tabs">
+      <button class="tab active" data-view="orders">Orders</button>
+      <button class="tab" data-view="products">Products & Stock</button>
+    </nav>
+
+    <div id="notice" aria-live="polite"></div>
+
+    <section id="ordersView">
+      <div class="stats">
+        <div class="stat"><span>Total orders loaded</span><strong id="totalOrders">—</strong></div>
+        <div class="stat"><span>Pending</span><strong id="pendingOrders">—</strong></div>
+        <div class="stat"><span>Confirmed</span><strong id="confirmedOrders">—</strong></div>
+        <div class="stat"><span>Delivered</span><strong id="deliveredOrders">—</strong></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Customer Orders</h2>
+          <button class="refresh" id="refreshOrders">Refresh orders</button>
+        </div>
+        <div id="ordersContent" class="loading">Loading orders...</div>
+      </div>
+    </section>
+
+    <section id="productsView" class="hidden">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Product Inventory</h2>
+          <button class="refresh" id="refreshProducts">Refresh products</button>
+        </div>
+        <div id="productsContent" class="loading">Loading products...</div>
+      </div>
+    </section>
+  </main>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const statuses = [
+  "PENDING", "CONFIRMED", "PROCESSING",
+  "SHIPPED", "DELIVERED", "CANCELLED"
+];
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
+
+function money(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount)
+    ? "₹" + amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })
+    : "—";
+}
+
+function notify(message, isError = false) {
+  $("notice").innerHTML =
+    '<div class="message" style="' +
+    (isError ? "background:#fff0ee;color:#b42318" : "") +
+    '">' + escapeHTML(message) + '</div>';
+  window.setTimeout(() => { $("notice").innerHTML = ""; }, 5000);
+}
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (response.status === 401) {
+    showLogin();
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
+
+  return data;
+}
+
+function showLogin() {
+  $("dashboard").classList.add("hidden");
+  $("loginScreen").classList.remove("hidden");
+  $("password").value = "";
+}
+
+function showDashboard() {
+  $("loginScreen").classList.add("hidden");
+  $("dashboard").classList.remove("hidden");
+  loadOrders();
+  loadProducts();
+}
+
+$("loginForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("loginError").textContent = "";
+
+  const username = $("username").value.trim();
+  const password = $("password").value;
+
+  try {
+    await api("/api/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password })
+    });
+
+    $("password").value = "";
+    showDashboard();
+  } catch (error) {
+    $("loginError").textContent = error.message;
+  }
+});
+
+$("logoutButton").addEventListener("click", async () => {
+  try {
+    await api("/api/logout", { method: "POST" });
+  } catch (error) {
+    console.error(error);
+  }
+  showLogin();
+});
+
+document.querySelectorAll(".tab").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.classList.toggle("active", tab === button);
+    });
+
+    $("ordersView").classList.toggle("hidden", button.dataset.view !== "orders");
+    $("productsView").classList.toggle("hidden", button.dataset.view !== "products");
+  });
+});
+
+async function loadOrders() {
+  $("ordersContent").textContent = "Loading orders...";
+
+  try {
+    const { orders } = await api("/api/orders");
+
+    $("totalOrders").textContent = orders.length;
+    $("pendingOrders").textContent = orders.filter(o => o.status === "PENDING").length;
+    $("confirmedOrders").textContent = orders.filter(o => o.status === "CONFIRMED").length;
+    $("deliveredOrders").textContent = orders.filter(o => o.status === "DELIVERED").length;
+
+    if (!orders.length) {
+      $("ordersContent").innerHTML = '<div class="empty">No orders found.</div>';
+      return;
+    }
+
+    $("ordersContent").innerHTML = `
+      <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Order</th><th>Customer</th><th>Items</th>
+            <th>Total</th><th>Date</th><th>Status</th><th>Update</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map(order => `
+            <tr>
+              <td><strong>${escapeHTML(order.orderNumber)}</strong></td>
+              <td>
+                ${escapeHTML(order.customerName)}<br>
+                ${escapeHTML(order.mobile)}<br>
+                <span class="muted">${escapeHTML(order.address)}, ${escapeHTML(order.city)} - ${escapeHTML(order.pincode)}</span>
+              </td>
+              <td>${(order.items || []).map(item =>
+                escapeHTML(item.productName) + " × " + escapeHTML(item.quantity)
+              ).join("<br>")}</td>
+              <td>${money(order.total)}</td>
+              <td>${escapeHTML(new Date(order.createdAt).toLocaleString("en-IN"))}</td>
+              <td>
+                <select id="status-${Number(order.id)}">
+                  ${statuses.map(status =>
+                    `<option value="${status}" ${order.status === status ? "selected" : ""}>${status}</option>`
+                  ).join("")}
+                </select>
+              </td>
+              <td><button class="small-button" data-order-id="${Number(order.id)}">Save</button></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+      </div>
+    `;
+
+    $("ordersContent").querySelectorAll("[data-order-id]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const id = Number(button.dataset.orderId);
+        const status = $("status-" + id).value;
+
+        try {
+          await api("/api/orders/" + id + "/status", {
+            method: "PATCH",
+            body: JSON.stringify({ status })
+          });
+          notify("Order status updated successfully.");
+          loadOrders();
+        } catch (error) {
+          notify(error.message, true);
+        }
+      });
+    });
+  } catch (error) {
+    $("ordersContent").textContent = error.message;
+  }
+}
+
+async function loadProducts() {
+  $("productsContent").textContent = "Loading products...";
+
+  try {
+    const { products } = await api("/api/products");
+
+    if (!products.length) {
+      $("productsContent").innerHTML = '<div class="empty">No products found.</div>';
+      return;
+    }
+
+    $("productsContent").innerHTML = `
+      <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th><th>SKU</th><th>Category</th>
+            <th>Selling price</th><th>Current stock</th><th>New stock</th><th>Save</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(product => `
+            <tr>
+              <td><strong>${escapeHTML(product.name)}</strong></td>
+              <td>${escapeHTML(product.sku)}</td>
+              <td>${escapeHTML(product.category)}</td>
+              <td>${money(product.sellingPrice)}</td>
+              <td>${Number(product.stockQuantity)}</td>
+              <td>
+                <input type="number" min="0" step="1"
+                  id="stock-${Number(product.id)}"
+                  value="${Number(product.stockQuantity)}">
+              </td>
+              <td><button class="small-button" data-product-id="${Number(product.id)}">Save</button></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+      </div>
+    `;
+
+    $("productsContent").querySelectorAll("[data-product-id]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const id = Number(button.dataset.productId);
+        const stockQuantity = Number($("stock-" + id).value);
+
+        if (!Number.isSafeInteger(stockQuantity) || stockQuantity < 0) {
+          notify("Enter a valid non-negative whole number.", true);
+          return;
+        }
+
+        try {
+          await api("/api/products/" + id + "/stock", {
+            method: "PATCH",
+            body: JSON.stringify({ stockQuantity })
+          });
+          notify("Product stock updated successfully.");
+          loadProducts();
+        } catch (error) {
+          notify(error.message, true);
+        }
+      });
+    });
+  } catch (error) {
+    $("productsContent").textContent = error.message;
+  }
+}
+
+$("refreshOrders").addEventListener("click", loadOrders);
+$("refreshProducts").addEventListener("click", loadProducts);
+
+async function checkSession() {
+  try {
+    await api("/api/me");
+    showDashboard();
+  } catch {
+    showLogin();
+  }
+}
+
+checkSession();
+</script>
+</body>
+</html>

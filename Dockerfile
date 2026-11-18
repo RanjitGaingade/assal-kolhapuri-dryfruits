@@ -3,19 +3,14 @@
 # =========================
 FROM node:22-alpine AS dependencies
 
-# Patch Alpine OS packages
 RUN apk update && apk upgrade
-
 WORKDIR /app
 
 COPY package*.json ./
-
-# Install all dependencies for Prisma generation
 RUN npm ci
 
 COPY prisma ./prisma
 COPY prisma.config.ts ./
-
 RUN npx prisma generate
 
 # =========================
@@ -23,14 +18,10 @@ RUN npx prisma generate
 # =========================
 FROM node:22-alpine AS production-dependencies
 
-# Patch Alpine OS packages
 RUN apk update && apk upgrade
-
 WORKDIR /app
 
 COPY package*.json ./
-
-# Install production dependencies only
 RUN npm ci --omit=dev
 
 # =========================
@@ -38,41 +29,30 @@ RUN npm ci --omit=dev
 # =========================
 FROM node:22-alpine AS production
 
-# Patch Alpine OS packages
 RUN apk update && apk upgrade
-
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy only production dependencies
 COPY --from=production-dependencies /app/node_modules ./node_modules
-
-# Copy generated Prisma client
 COPY --from=dependencies /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=dependencies /app/node_modules/@prisma/client ./node_modules/@prisma/client
-
-# Prisma CLI is needed for migrations at container startup
 COPY --from=dependencies /app/node_modules/prisma ./node_modules/prisma
 
 COPY package.json ./
-
 COPY prisma ./prisma
-
 COPY prisma.config.ts ./
-
 COPY public ./public
-
 COPY server.js ./
-
+COPY admin-server.js ./
+COPY start.js ./
+COPY private ./private
 COPY certs/global-bundle.pem /app/certs/global-bundle.pem
 
-# Remove npm and npx from the runtime image.
-# npm is only required during the build stages.
 RUN rm -rf /usr/local/lib/node_modules/npm \
     /usr/local/bin/npm \
     /usr/local/bin/npx
 
-EXPOSE 3000
+EXPOSE 3000 3001
 
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node start.js"]

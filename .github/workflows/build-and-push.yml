@@ -282,6 +282,13 @@ jobs:
 
           docker pull "${IMAGE}"
 
+          echo "Checking private admin credentials file..."
+          if [ ! -s /etc/assal-admin.env ]; then
+            echo "ERROR: /etc/assal-admin.env is missing or empty."
+            exit 1
+          fi
+          chmod 600 /etc/assal-admin.env
+
           echo "Stopping previous application container if present..."
 
           docker stop "${CONTAINER_NAME}" 2>/dev/null || true
@@ -293,6 +300,8 @@ jobs:
             --name "${CONTAINER_NAME}" \
             --restart unless-stopped \
             -p 3000:3000 \
+            -p 127.0.0.1:3001:3001 \
+            --env-file /etc/assal-admin.env \
             -e NODE_ENV=production \
             -e PORT=3000 \
             -e AWS_REGION="${AWS_REGION}" \
@@ -335,6 +344,24 @@ jobs:
           fi
 
           echo "========================================"
+          echo "Checking private admin health..."
+
+          ADMIN_HEALTHY=0
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent http://127.0.0.1:3001/health >/dev/null; then
+              ADMIN_HEALTHY=1
+              break
+            fi
+            echo "Admin health check attempt ${attempt}/12..."
+            sleep 5
+          done
+
+          if [ "${ADMIN_HEALTHY}" -ne 1 ]; then
+            echo "ERROR: Private admin health check failed."
+            docker logs "${CONTAINER_NAME}" --tail 60 || true
+            exit 1
+          fi
+
           echo "Deployment completed successfully."
           echo "========================================"
           SCRIPT
