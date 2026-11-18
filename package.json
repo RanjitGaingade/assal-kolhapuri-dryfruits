@@ -32,7 +32,7 @@
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.10.0",
     "express": "^5.2.1",
-    "multer": "^2.2.0",
+    "multer": "^2.5.0",
     "pg": "^8.23.0",
     "prisma": "^7.10.0"
   },
@@ -44,6 +44,9 @@
   },
   "overrides": {
     "deepmerge-ts": "8.0.0",
-    "mysql2": "3.24.3"
+    "mysql2": "3.24.3",
+    "body-parser": "2.4.0",
+    "proxy-addr": "2.0.8",
+    "fast-uri": "3.1.9"
   }
 }
