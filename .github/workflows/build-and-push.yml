@@ -86,6 +86,23 @@ jobs:
         run: |
           set -e
 
+          echo "Discovering current EC2 instance..."
+
+          EC2_INSTANCE_ID=$(aws ec2 describe-instances \
+            --region "${AWS_REGION}" \
+            --filters \
+              "Name=tag:Name,Values=assal-kolhapuri-ec2" \
+              "Name=instance-state-name,Values=running" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text)
+
+          if [ -z "${EC2_INSTANCE_ID}" ]; then
+            echo "ERROR: Could not find a running EC2 instance with Name=assal-kolhapuri-ec2"
+            exit 1
+          fi
+
+          echo "Current EC2 instance: ${EC2_INSTANCE_ID}"
+
           echo "Building Docker image..."
 
           docker build \
@@ -147,30 +164,240 @@ jobs:
 
           echo "Docker image pushed successfully."
 
+
       # =========================================================
       # 12. DEPLOY TO EC2 VIA AWS SSM
       # =========================================================
+
       - name: Deploy to EC2 via SSM
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
-          EC2_INSTANCE_ID: i-04ffba9d048c439f9
           ECR_REPOSITORY: assal-kolhapuri-api
           RDS_SECRET_ARN: arn:aws:secretsmanager:ap-south-1:104367407330:secret:rds!db-bef30228-9bf0-4e7a-859c-a9944b000ecb-g3qz9R
           RDS_ENDPOINT: assal-kolhapuri-postgres.c3cgkeymu7my.ap-south-1.rds.amazonaws.com
           RDS_DATABASE: assalkolhapuri
           RDS_USERNAME: postgres
-
         run: |
-          set -e
+          set -euo pipefail
+
+          EXPECTED_ACCOUNT="104367407330"
+          EXPECTED_INSTANCE_ID="i-09fe5022ab9f26ed9"
+
+          echo "Checking AWS identity..."
+          ACTUAL_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+
+          if [ "${ACTUAL_ACCOUNT}" != "${EXPECTED_ACCOUNT}" ]; then
+            echo "ERROR: Wrong AWS account: ${ACTUAL_ACCOUNT}"
+            exit 1
+          fi
+
+          echo "AWS account verified."
+          echo "AWS region: ${AWS_REGION}"
+
+          if [ "${AWS_REGION}" != "ap-south-1" ]; then
+            echo "ERROR: Unexpected AWS region: ${AWS_REGION}"
+            exit 1
+          fi
+
+          echo "Discovering EC2 instance..."
+
+          EC2_INSTANCE_ID=$(aws ec2 describe-instances \
+            --region "${AWS_REGION}" \
+            --filters \
+              "Name=tag:Name,Values=assal-kolhapuri-ec2" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+          echo "Discovered instance: ${EC2_INSTANCE_ID}"
+
+          if [ "${EC2_INSTANCE_ID}" != "${EXPECTED_INSTANCE_ID}" ]; then
+            echo "ERROR: Expected ${EXPECTED_INSTANCE_ID}, discovered ${EC2_INSTANCE_ID}"
+            exit 1
+          fi
+
+          echo "Checking SSM registration..."
+
+          PING_STATUS=$(aws ssm describe-instance-information \
+            --region "${AWS_REGION}" \
+            --filters "Key=InstanceIds,Values=${EC2_INSTANCE_ID}" \
+            --query "InstanceInformationList[0].PingStatus" \
+            --output text)
+
+          echo "SSM PingStatus: ${PING_STATUS}"
+
+          if [ "${PING_STATUS}" != "Online" ]; then
+            echo "ERROR: EC2 instance is not Online in SSM."
+            exit 1
+          fi
 
           echo "Preparing EC2 deployment script..."
 
           cat > /tmp/deploy.sh <<'SCRIPT'
           #!/bin/bash
+          set -euo pipefail
 
-          set -e
+          echo "========================================"
+          echo "Starting Assal Kolhapuri deployment"
+          echo "========================================"
+
+          AWS_REGION="ap-south-1"
+          ECR_REGISTRY="104367407330.dkr.ecr.ap-south-1.amazonaws.com"
+          ECR_REPOSITORY="assal-kolhapuri-api"
+          IMAGE_TAG="${IMAGE_TAG}"
+          RDS_SECRET_ARN="arn:aws:secretsmanager:ap-south-1:104367407330:secret:rds!db-bef30228-9bf0-4e7a-859c-a9944b000ecb-g3qz9R"
+          RDS_ENDPOINT="assal-kolhapuri-postgres.c3cgkeymu7my.ap-south-1.rds.amazonaws.com"
+          RDS_DATABASE="assalkolhapuri"
+          RDS_USERNAME="postgres"
+
+          IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          CONTAINER_NAME="assal-kolhapuri-api"
+
+          echo "Logging in to Amazon ECR..."
+
+          aws ecr get-login-password --region "${AWS_REGION}" |
+            docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
+          echo "Retrieving database credentials from Secrets Manager..."
+
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --region "${AWS_REGION}" \
+            --secret-id "${RDS_SECRET_ARN}" \
+            --query SecretString \
+            --output text)
+
+          DB_PASSWORD=$(python3 -c \
+            'import sys,json,urllib.parse; print(urllib.parse.quote(json.load(sys.stdin)["password"], safe=""))' \
+            <<< "${SECRET_JSON}")
+
+          unset SECRET_JSON
+
+          DATABASE_URL="postgresql://${RDS_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}:5432/${RDS_DATABASE}?schema=public"
+          unset DB_PASSWORD
+
+          echo "Pulling application image..."
+
+          docker pull "${IMAGE}"
+
+          echo "Stopping previous application container if present..."
+
+          docker stop "${CONTAINER_NAME}" 2>/dev/null || true
+          docker rm "${CONTAINER_NAME}" 2>/dev/null || true
+
+          echo "Starting new application container..."
+
+          docker run -d \
+            --name "${CONTAINER_NAME}" \
+            --restart unless-stopped \
+            -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e PORT=3000 \
+            -e AWS_REGION="${AWS_REGION}" \
+            -e RDS_ENDPOINT="${RDS_ENDPOINT}" \
+            -e RDS_DATABASE="${RDS_DATABASE}" \
+            -e RDS_USERNAME="${RDS_USERNAME}" \
+            -e RDS_SECRET_ARN="${RDS_SECRET_ARN}" \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            "${IMAGE}"
+
+          unset DATABASE_URL
+
+          echo "Waiting for application startup..."
+          sleep 15
+
+          if ! docker ps --filter "name=${CONTAINER_NAME}" --filter "status=running" --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
+            echo "ERROR: Application container is not running."
+            docker logs "${CONTAINER_NAME}" --tail 60 || true
+            exit 1
+          fi
+
+          echo "Checking application health..."
+
+          HEALTHY=0
+
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then
+              HEALTHY=1
+              break
+            fi
+            echo "Health check attempt ${attempt}/12..."
+            sleep 5
+          done
+
+          if [ "${HEALTHY}" -ne 1 ]; then
+            echo "ERROR: Application health check failed."
+            docker logs "${CONTAINER_NAME}" --tail 60 || true
+            exit 1
+          fi
+
+          echo "========================================"
+          echo "Deployment completed successfully."
+          echo "========================================"
+          SCRIPT
+
+          echo "Encoding deployment script..."
+
+          DEPLOY_SCRIPT_BASE64=$(base64 < /tmp/deploy.sh | tr -d '\n')
+          rm -f /tmp/deploy.sh
+
+          echo "Sending deployment command to EC2..."
+
+          COMMAND_ID=$(aws ssm send-command \
+            --region "${AWS_REGION}" \
+            --instance-ids "${EC2_INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy Assal Kolhapuri ${IMAGE_TAG}" \
+            --parameters "commands=[\"echo '${DEPLOY_SCRIPT_BASE64}' | base64 -d > /tmp/assal-deploy.sh\",\"chmod 700 /tmp/assal-deploy.sh\",\"IMAGE_TAG='${IMAGE_TAG}' /tmp/assal-deploy.sh\"]" \
+            --timeout-seconds 600 \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: ${COMMAND_ID}"
+          echo "Waiting for deployment to finish..."
+
+          for attempt in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --region "${AWS_REGION}" \
+              --command-id "${COMMAND_ID}" \
+              --instance-id "${EC2_INSTANCE_ID}" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "Pending")
+
+            echo "Deployment status: ${STATUS}"
+
+            case "${STATUS}" in
+              Success)
+                echo "EC2 deployment completed successfully."
+                exit 0
+                ;;
+              Failed|Cancelled|TimedOut)
+                echo "ERROR: Deployment failed with status ${STATUS}."
+
+                aws ssm get-command-invocation \
+                  --region "${AWS_REGION}" \
+                  --command-id "${COMMAND_ID}" \
+                  --instance-id "${EC2_INSTANCE_ID}" \
+                  --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+                  --output json
+
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "ERROR: Timed out waiting for deployment."
+
+          aws ssm get-command-invocation \
+            --region "${AWS_REGION}" \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}" \
+            --output json || true
+
+          exit 1
 
           echo "========================================"
           echo "Starting EC2 deployment"
