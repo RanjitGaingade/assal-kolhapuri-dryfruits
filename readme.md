@@ -4,7 +4,7 @@ An end-to-end, production-style deployment of a Node.js e-commerce application o
 
 This project takes a REST API from source code to a fully automated, secured, and monitored AWS deployment — provisioned entirely with Terraform and deployed via GitHub Actions.
 
-## Architecture
+## Architecture Diagram
 
 ![AWS Architecture Diagram](docs/Architecture-diagram.png)
 
